@@ -24,10 +24,19 @@ class DictEnum:
 TYPES = DictEnum(_TYPES_DICT)
 
 
-def parser(type_name):
+def parser(type_name, validation_regexp=None):
     def inner(func):
-        _TYPES_DICT[type_name]['parser'] = func
-        return func
+        if validation_regexp:
+            def new_func(value):
+                if isinstance(value, str):
+                    if not re.match(validation_regexp, value):
+                        raise ValueError(f"Value '{value}' does not match the required pattern")
+                return func(value)
+        else:
+            new_func = func
+
+        _TYPES_DICT[type_name]['parser'] = new_func
+        return new_func
     return inner
 
 
@@ -92,7 +101,7 @@ TIME_UNITS = {
     'd': 24 * 60 * 60,  # days
     'h': 60 * 60,  # hours
     'm': 60,  # minutes
-    's': 1  # seconds
+    's': 1,  # seconds
     'ms': 0.001  # milliseconds
 }
 
@@ -106,6 +115,7 @@ TIME_UNIT_ALIASES = {
     'ms': ['millisecond', 'milliseconds']
 }
 
+@parser("timedelta")
 def _convert_to_timedelta(value):
     """
     Return a timedelta object translating from other types if necessary.
@@ -173,6 +183,50 @@ def _convert_to_timedelta(value):
 
     except (ValueError, TypeError):
         raise ValueError(f"Not a valid timedelta: {value}")
+
+
+@parser("integer")
+def _convert_to_int(value):
+    """
+    Return an int value translating from other types if necessary.
+
+    >>> _convert_to_int(5)
+    5
+
+    >>> _convert_to_int("10")
+    10
+
+    >>> _convert_to_int("invalid")
+    Traceback (most recent call last):
+    ...
+    ValueError: Not an integer: invalid
+    """
+    try:
+        return int(value)
+    except ValueError:
+        raise ValueError(f"Not an integer: {value}")
+
+
+@parser("hostname", validation_regexp=r"[a-zA-Z0-9\-\.]+")
+def _convert_to_hostname(value):
+    """
+    Return a hostname value translating from other types if necessary.
+
+    >>> _convert_to_hostname("example.com")
+    'example.com'
+
+    >>> _convert_to_hostname(123)
+    '123'
+
+    >>> _convert_to_hostname(None)
+    Traceback (most recent call last):
+    ...
+    ValueError: Not a hostname: None
+    """
+    if isinstance(value, str):
+        return value
+    else:
+        raise ValueError(f"Not a hostname: {value}")
 
 
 if __name__ == '__main__':

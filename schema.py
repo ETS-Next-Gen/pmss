@@ -1,3 +1,5 @@
+from types.py import TYPES
+
 fields = {}
 
 def canonical_field_name(field_name):
