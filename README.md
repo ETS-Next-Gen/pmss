@@ -54,14 +54,21 @@ Who else has thought about this?
 * Configuration languages
   * [Dhall](https://dhall-lang.org/) has very nice tooling which can visualize if a change to a file led to a change in output configuration, as well as diffs to see what the change was.
   * [configparser](https://docs.python.org/3/library/configparser.html) is the Python default, very much based on INI files. Good ideas include interpolation.
-* Schemas
+* Schemas. There's a whole theory of types, which is out-of-scope for this list (but in-scope for a grad-level course).
+  * The best schema definition language seems to be [Cue](https://cuelang.org/) which is in Go, but has basic [Python integration](https://pypi.org/project/pycue/). We should probably use this verbatim.
   * [XML DTDs](https://en.wikipedia.org/wiki/Document_type_definition)
-  * 
+  * [JSON Schema](https://json-schema.org/)
+  * [Traitlets](https://traitlets.readthedocs.io/en/stable/using_traitlets.html) thought a little bit about validation, although it seems to mix models in a way I don't like.
 * CSS does most of what we want
-  * SASS builds on it with useful shortcuts
   * [tinycss2](https://doc.courtbouillon.org/tinycss2/stable/first_steps.html) seems like the right parser to work from.
+  * SASS builds on it with useful shortcuts. Should we adopt SASS extensions?
+* Configuration languages
+  * [pkl](https://pkl-lang.org/blog/introducing-pkl.html) was recently released by Apple. It seems to have some very nice ideas, but misses a lot as well. See also [HN discussion](https://news.ycombinator.com/item?id=39232976). Well worth reviewing, if not adopting.
+  * [gcl](https://gcl.readthedocs.io/en/latest/) has nice copy about configuration. The language itself is very Turing-complete, which makes it a bit awkward. It's a little like having a code file, config.py.
+  * [hcl](https://github.com/hashicorp/hcl) Seems nice.
+  * [JSonnet](https://jsonnet.org/) has nice ideas, but seems to confuse templates and inheritence. Cue, above, is a reaction to this confusion.
 
-http://cuelang.org/
+
 
 What's the model
 ----------------
