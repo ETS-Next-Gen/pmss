@@ -7,8 +7,8 @@
 
 .modules {
    .writing_observer {
-       use_nlp: false
-       openai_api_key: '' # can also be set with OPENAI_API_KEY environment variable
+       use_nlp: false;
+       openai_api_key: ''; // can also be set with OPENAI_API_KEY environment variable
    }
 }
 
@@ -26,17 +26,21 @@
 
     .settings {
         type: postgres;
-        postgres-auth: local;
+        postgres_auth: local;
     }
 }
 
 .roster_data {
-    roster-source: filesystem;
+    roster_source: filesystem;
     [school=middlesex] {
        roster-source: google;
        .auth {
        }
     }
+}
+
+.costs [school=middlesex] {
+   salary: $30;
 }
 
 .logging {

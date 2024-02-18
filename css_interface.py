@@ -2,6 +2,10 @@
 #
 # tinycss2 has annoying bugs, and ply seems to work better. We're commiting
 # to have a snapshot before we (probably) remove it.
+#
+# Update: There is a PR to fix the tinycss2 bugs which bug us most, but I'm pretty happy with ply,
+# so we'll probably take that route
+
 
 import tinycss2
 import tinycss2.ast
