@@ -79,6 +79,8 @@ class AttributeSelector(Selector):
     # Note that we treat [biff] (an attribute exists) as operator and value simply being None
     def __init__(self, attribute, operator, value):
         self.attribute = attribute
+        self.operator = operator
+        self.value = value
 
     def __str__(self):
         if self.operator is None:
@@ -93,6 +95,15 @@ class CompoundSelector(Selector):
 
     def __str__(self):
         return " ".join(map(str, self.selectors))
+
+
+class NullSelector(CompoundSelector):
+    def __init__(self):
+        super().__init__([])
+
+    def __str__(self):
+        return '---'
+
 
 class UniversalSelector(Selector):
     def __str__(self):

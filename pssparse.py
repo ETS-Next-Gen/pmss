@@ -27,11 +27,6 @@ def p_error(p):
     yacc.errok()
 
 
-def p_selector(p):
-    '''selector : SIMPLE_ATTRIBUTE_SELECTOR
-                | ATTRIBUTE_KV_SELECTOR'''
-    p[0] = [p[1]]
-
 def p_type_selector(p):
     ''' selector : IDENT '''
     p[0] = selectors.TypeSelector(p[1])
@@ -40,57 +35,48 @@ def p_class_selector(p):
     ''' selector : CLASS_SELECTOR '''
     p[0] = selectors.ClassSelector(p[1])
 
+def p_universal_selector(p):
+    ''' selector : UNIVERSAL_SELECTOR '''
+    p[0] = selectors.UniversalSelector()
+
 def p_selector_multi(p):
     '''selector : selector selector'''
     p[0] = p[1] + p[2]
 
 def p_block(p):
-    '''key_value_pair : selector LBRACE key_value_pair RBRACE'''
-    p[0] = [p[1], p[3]]
+    '''key_value_pair : selector LBRACE key_value_pair RBRACE
+                      | selector LBRACE RBRACE '''
+    if len(p) == 5:
+        p[0] = [[p[1], p[3]]]
+    else:
+        p[0] = [[p[1], None]]
+
+def p_simple_attribute_selector(p):
+    '''selector : SIMPLE_ATTRIBUTE_SELECTOR'''
+    p[0] = selectors.AttributeSelector(attribute=p[1][1:-1], operator=None, value=None)
+
+def p_attribute_kv_selector(p):
+    '''selector : ATTRIBUTE_KV_SELECTOR'''
+    operator = '='
+    attribute = p[1].split("=")[0][1:]
+    value = p[1].split("=")[1][:-1]
+    p[0] = selectors.AttributeSelector(attribute, operator, value)
 
 
-sample = """
-.system {
-   hostname: localhost;
-   port: 8888;
-   protocol: http;
-   run_mode: dev;
-}
-
-.modules {
-   .writing_observer {
-       use_nlp: false;
-       openai_api_key: ''; // can also be set with OPENAI_API_KEY environment variable
-   }
-}
-
-.auth .web {
-   password_file: passwd.lo;
-}
-
-.kvs {
-    type: stub;
-    expiry: 6000;
-
-    .memoization {
-        type: redis-ephemeral;
-    }
-
-    .settings {
-        type: postgres;
-        postgres_auth: local;
-    }
-}
-"""
-
-def flatten_rules(rule_list, parent_selector):
-    for selector, rule in rule_list:
-        pass
+def flatten_rules(block_list, parent_selector):
+    for selector, block in block_list:
+        if block is None:
+            continue
+        for rule in block:
+            if not isinstance(rule[0], selectors.Selector):
+                yield parent_selector + selector, rule[0], rule[1]
+            else:
+                flatten_rules([rule], parent_selector + selector)
 
 text = open("creds.pss.example").read()
-text = sample
 no_comments = strip_comments(text)
 parser = yacc.yacc()
-result = parser.parse(no_comments, lexer=lexer, debug=True)
-print(result)
+result = parser.parse(no_comments, lexer=lexer)
+for selector, key, value in flatten_rules(result, selectors.NullSelector()):
+    print(f"{selector} {{ {key}: {value}; }}")
 

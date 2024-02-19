@@ -1,22 +1,22 @@
-.system {
+* {
    hostname: localhost;
    port: 8888;
    protocol: http;
    run_mode: dev;
 }
 
-.modules {
-   .writing_observer {
+modules {
+   writing_observer {
        use_nlp: false;
        openai_api_key: ''; // can also be set with OPENAI_API_KEY environment variable
    }
 }
 
-.auth .web {
+auth web {
    password_file: passwd.lo;
 }
 
-.kvs {
+kvs {
     type: stub;
     expiry: 6000;
 
@@ -30,7 +30,7 @@
     }
 }
 
-.roster_data {
+roster_data {
     roster_source: filesystem;
     [school=middlesex] {
        roster_source: google;
@@ -39,20 +39,21 @@
     }
 }
 
-.costs [school=middlesex] {
-   salary: $30;
+costs [school=middlesex] {
+   salary: 30;
 }
 
-.logging {
+logging {
     debug_log_level: SIMPLE;
     debug_log_destinations: console,file;
+}
 
-.theme {
+theme {
     server_name: Learning Observer;
     front_page_pitch: Learning Observer is an experimental dashboard. If you'd like to be part of the experiment, please contact us. If you're already part of the experiment, log in!;
     logo_big: /static/media/logo-clean.jpg;
 }
 
-.event_auth {
+event_auth {
     enabled: testcase_auth;
 }

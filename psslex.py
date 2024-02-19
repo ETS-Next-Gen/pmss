@@ -12,7 +12,10 @@ tokens = (
     "CLASS_SELECTOR",
     "SIMPLE_ATTRIBUTE_SELECTOR",
     "ATTRIBUTE_KV_SELECTOR",
-    "COMPARISON"
+    "UNIVERSAL_SELECTOR",
+    "COMPARISON",
+    "PSEUDO_CLASS_SELECTOR",
+    "PSEUDO_ELEMENT_SELECTOR"
 )
 
 states = (
@@ -25,10 +28,13 @@ def t_WHITESPACE(t):
     # Note this will not match within values
 
 t_IDENT = r"[a-zA-Z0-9_]+"
-t_CLASS_SELECTOR = r"\.[a-zA-Z0-9_]+"
-t_SIMPLE_ATTRIBUTE_SELECTOR = r"\[[a-zA-Z0-9_]+\]"
-t_ATTRIBUTE_KV_SELECTOR = r"\[[a-zA-Z0-9_]+=[a-zA-Z0-9_]+\]"
 t_COMPARISON = r'(=|~=|\|=|^=|\$=|\*=)'
+t_CLASS_SELECTOR = r"\." + t_IDENT
+t_SIMPLE_ATTRIBUTE_SELECTOR = r"\[" + t_IDENT + "\]"
+t_ATTRIBUTE_KV_SELECTOR = r"\[" + t_IDENT + "=" + t_IDENT + "\]"
+t_UNIVERSAL_SELECTOR = r"[*]"
+t_PSEUDO_CLASS_SELECTOR = r"\:" + t_IDENT
+t_PSEUDO_ELEMENT_SELECTOR = r"\:\:" + t_IDENT
 
 def t_COLON(t):
     r":"
