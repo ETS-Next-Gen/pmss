@@ -11,7 +11,8 @@ tokens = (
     "VALUE",
     "CLASS_SELECTOR",
     "SIMPLE_ATTRIBUTE_SELECTOR",
-    "ATTRIBUTE_KV_SELECTOR"
+    "ATTRIBUTE_KV_SELECTOR",
+    "COMPARISON"
 )
 
 states = (
@@ -27,6 +28,7 @@ t_IDENT = r"[a-zA-Z0-9_]+"
 t_CLASS_SELECTOR = r"\.[a-zA-Z0-9_]+"
 t_SIMPLE_ATTRIBUTE_SELECTOR = r"\[[a-zA-Z0-9_]+\]"
 t_ATTRIBUTE_KV_SELECTOR = r"\[[a-zA-Z0-9_]+=[a-zA-Z0-9_]+\]"
+t_COMPARISON = r'(=|~=|\|=|^=|\$=|\*=)'
 
 def t_COLON(t):
     r":"
