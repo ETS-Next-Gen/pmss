@@ -8,7 +8,6 @@ tokens = (
     "IDENT",
     "LBRACE",
     "RBRACE",
-    "IDENTIFER",
     "VALUE",
     "CLASS_SELECTOR",
     "SIMPLE_ATTRIBUTE_SELECTOR",
@@ -19,7 +18,11 @@ states = (
     ('value', 'exclusive'),
 )
 
-t_WHITESPACE = r"[\t\r\n\f ]+"
+def t_WHITESPACE(t):
+    r"[\t\r\n\f ]+"
+    # No return, since we're skipping whitespace.
+    # Note this will not match within values
+
 t_IDENT = r"[a-zA-Z0-9_]+"
 t_CLASS_SELECTOR = r"\.[a-zA-Z0-9_]+"
 t_SIMPLE_ATTRIBUTE_SELECTOR = r"\[[a-zA-Z0-9_]+\]"
@@ -78,7 +81,8 @@ def test_lexer(input_string):
             break
         print(f"[{token.type}]: '{token.value.strip()}'")
 
-test_lexer(open("creds.pss.example").read())
+if __name__ == '__main__':
+    test_lexer(open("creds.pss.example").read())
 
 """
 .body {

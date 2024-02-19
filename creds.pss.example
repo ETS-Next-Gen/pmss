@@ -33,7 +33,7 @@
 .roster_data {
     roster_source: filesystem;
     [school=middlesex] {
-       roster-source: google;
+       roster_source: google;
        .auth {
        }
     }
