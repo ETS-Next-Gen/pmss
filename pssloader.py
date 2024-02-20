@@ -32,13 +32,12 @@ def rule_sheet(parse_results, metadata={}):
     return dict(d)
 
 
-def load_pss_file(filename):
+def load_pss_file(filename, print_debug=False):
     text = open(filename).read()
     no_comments = psslex.strip_comments(text)
     result = pssyacc.parser.parse(no_comments, lexer=psslex.lexer)
-
-    flatten_and_print_parse(result)
-
+    if print_debug:
+        flatten_and_print_parse(result)
     rules = rule_sheet(result)
     return rules
 

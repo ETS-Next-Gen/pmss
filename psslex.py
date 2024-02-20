@@ -29,6 +29,8 @@ def t_WHITESPACE(t):
 
 t_IDENT = r"[a-zA-Z0-9_]+"
 t_COMPARISON = r'(=|~=|\|=|^=|\$=|\*=)'
+# Possible TODO:
+# * Many of these should move into the parser.
 t_CLASS_SELECTOR = r"\." + t_IDENT
 t_SIMPLE_ATTRIBUTE_SELECTOR = r"\[" + t_IDENT + "\]"
 t_ATTRIBUTE_KV_SELECTOR = r"\[" + t_IDENT + "=" + t_IDENT + "\]"

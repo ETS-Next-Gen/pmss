@@ -1,3 +1,5 @@
+# TODO: Equality should compare metadata too.
+
 class Selector():
     def __init__(self):
         self.metadata = None
