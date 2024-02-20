@@ -8,6 +8,12 @@ class Selector():
         self.metadata = metadata
 
     def __add__(self, other):
+        if isinstance(self, NullSelector):
+            return other
+
+        if isinstance(other, NullSelector):
+            return self
+
         if not isinstance(other, Selector):
             raise TypeError(f"Unsupported type: {type(other)}")
 
