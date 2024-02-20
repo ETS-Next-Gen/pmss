@@ -1,6 +1,7 @@
 import ply.yacc as yacc
-from psslex import strip_comments, lexer, test_lexer, tokens
+from psslex import lexer, tokens
 import selectors
+import collections
 
 def p_key_value_pair(p):
     'key_value_pair : IDENT COLON VALUE SEMICOLON'
@@ -31,17 +32,21 @@ def p_type_selector(p):
     ''' selector : IDENT '''
     p[0] = selectors.TypeSelector(p[1])
 
+
 def p_class_selector(p):
     ''' selector : CLASS_SELECTOR '''
     p[0] = selectors.ClassSelector(p[1])
+
 
 def p_universal_selector(p):
     ''' selector : UNIVERSAL_SELECTOR '''
     p[0] = selectors.UniversalSelector()
 
+
 def p_selector_multi(p):
     '''selector : selector selector'''
     p[0] = p[1] + p[2]
+
 
 def p_block(p):
     '''key_value_pair : selector LBRACE key_value_pair RBRACE
@@ -51,9 +56,11 @@ def p_block(p):
     else:
         p[0] = [[p[1], None]]
 
+
 def p_simple_attribute_selector(p):
     '''selector : SIMPLE_ATTRIBUTE_SELECTOR'''
     p[0] = selectors.AttributeSelector(attribute=p[1][1:-1], operator=None, value=None)
+
 
 def p_attribute_kv_selector(p):
     '''selector : ATTRIBUTE_KV_SELECTOR'''
@@ -63,24 +70,4 @@ def p_attribute_kv_selector(p):
     p[0] = selectors.AttributeSelector(attribute, operator, value)
 
 
-def flatten_rules(block_list, parent_selector):
-    for selector, block in block_list:
-        if block is None:
-            continue
-        for rule in block:
-            if not isinstance(rule[0], selectors.Selector):
-                yield parent_selector + selector, rule[0], rule[1]
-            else:
-                flatten_rules([rule], parent_selector + selector)
-
-def flatten_and_print_parse(block_list):
-    for selector, key, value in flatten_rules(result, selectors.NullSelector()):
-        print(f"{selector} {{ {key}: {value}; }}")
-
-
-text = open("creds.pss.example").read()
-no_comments = strip_comments(text)
 parser = yacc.yacc()
-result = parser.parse(no_comments, lexer=lexer)
-
-flatten_and_print_parse(result)

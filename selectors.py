@@ -1,4 +1,10 @@
 class Selector():
+    def __init__(self):
+        self.metadata = None
+
+    def set_metadata(self, metadata):
+        self.metadata = metadata
+
     def __add__(self, other):
         if not isinstance(other, Selector):
             raise TypeError(f"Unsupported type: {type(other)}")
@@ -24,9 +30,11 @@ class Selector():
     def __ne__(self, other):
         return not self == other
 
+
 class ClassSelector(Selector):
     # e.g. `.foo`
     def __init__(self, class_name):
+        super().__init__()
         if class_name[0] == ".":
             class_name = class_name[1:]
         self.class_name = class_name
@@ -40,12 +48,16 @@ class ClassSelector(Selector):
 
         return self.class_name == other.class_name
 
+    def __hash__(self):
+        return super().__hash__()
+
 
 class TypeSelector(Selector):
     # e.g. `div`
     def __init__(self, element_type):
+        super().__init__()
         self.element_type = element_type
-    
+
     def __str__(self):
         return self.element_type
 
@@ -55,13 +67,14 @@ class TypeSelector(Selector):
 
         return self.element_type == other.element_type
 
-    def __ne__(self, other):
-        return not self == other
+    def __hash__(self):
+        return super().__hash__()
 
 
 class IDSelector(Selector):
     # e.g. `#bar`
     def __init__(self, id_name):
+        super().__init__()
         if id_name[0] == "#":
             id_name = id_name[1:]
         self.id_name = id_name
@@ -75,10 +88,14 @@ class IDSelector(Selector):
 
         return self.id_name == other.id_name
 
+    def __hash__(self):
+        return super().__hash__()
+
 
 class PseudoClassSelector(Selector):
     # e.g. `:hover`
     def __init__(self, pseudo_class):
+        super().__init__()
         self.pseudo_class = pseudo_class
     
     def __str__(self):
@@ -90,10 +107,14 @@ class PseudoClassSelector(Selector):
 
         return self.pseudo_class == other.pseudo_class
 
+    def __hash__(self):
+        return super().__hash__()
+
 
 class PseudoElementSelector(Selector):
     # e.g. `::before`
     def __init__(self, pseudo_element):
+        super().__init__()
         self.pseudo_element = pseudo_element
     
     def __str__(self):
@@ -105,6 +126,9 @@ class PseudoElementSelector(Selector):
 
         return self.pseudo_element == other.pseudo_element
 
+    def __hash__(self):
+        return super().__hash__()
+
 
 class AttributeSelector(Selector):
     # e.g. [foo$=bar] or [biff]
@@ -113,6 +137,7 @@ class AttributeSelector(Selector):
     #
     # Note that we treat [biff] (an attribute exists) as operator and value simply being None
     def __init__(self, attribute, operator, value):
+        super().__init__()
         self.attribute = attribute
         self.operator = operator
         self.value = value
@@ -128,10 +153,14 @@ class AttributeSelector(Selector):
 
         return self.attribute == other.attribute and self.operator == other.operator and self.value == other.value
 
+    def __hash__(self):
+        return super().__hash__()
+
 
 class CompoundSelector(Selector):
     # e.g. '.foo.bar [baz=biff] [bam] blah
     def __init__(self, selectors):
+        super().__init__()
         self.selectors = selectors
 
     def __str__(self):
@@ -145,6 +174,8 @@ class CompoundSelector(Selector):
         #  "foo bar" == "bar foo"
         return all(s1 == s2 for s1, s2 in zip(self.selectors, other.selectors))
 
+    def __hash__(self):
+        return super().__hash__()
 
 class NullSelector(CompoundSelector):
     def __init__(self):
@@ -156,10 +187,18 @@ class NullSelector(CompoundSelector):
     def __eq__(self, other):
         return isinstance(other, NullSelector)
 
+    def __hash__(self):
+        return super().__hash__()
 
 class UniversalSelector(Selector):
+    def __init__(self):
+        super().__init__()
+
     def __str__(self):
         return "*"
+
     def __eq__(self, other):
         return isinstance(other, UniversalSelector)
 
+    def __hash__(self):
+        return super().__hash__()

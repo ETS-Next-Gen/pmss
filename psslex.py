@@ -61,11 +61,6 @@ r_BLOCKCOMMENT = r'\/\*[^*]*\*+([^/*][^*]*\*+)*\/'
 r_LINECOMMENT = r'\/\/.*'
 
 
-def strip_comments(text):
-    text = re.sub(r_BLOCKCOMMENT, '', text, flags=re.MULTILINE)
-    text = re.sub(r_LINECOMMENT, '', text)
-    return text
-
 # Error handling rule
 def t_error(t):
     print("Illegal character '%s'" % t.value[0])
@@ -78,25 +73,33 @@ def t_value_error(t):
 # Build the lexer
 lexer = lex.lex()
 
+def strip_comments(text):
+    '''
+    Preprocessing step
+    '''
+    text = re.sub(r_BLOCKCOMMENT, '', text, flags=re.MULTILINE)
+    text = re.sub(r_LINECOMMENT, '', text)
+    return text
+
 # Test the lexer
 def test_lexer(input_string):
-    no_comments = strip_comments(input_string)
-    print(no_comments)
-    lexer.input(no_comments)
+    lexer.input(input_string)
     while True:
         token = lexer.token()
         if not token:
             break
         print(f"[{token.type}]: '{token.value.strip()}'")
 
-if __name__ == '__main__':
-    test_lexer(open("creds.pss.example").read())
 
-"""
-.body {
-    color: #FF0000; // Red
-    font_size: 12px; /* Normal size */
-    background_image: url('image.jpg');
-    name: John Smith;
-}
-"""
+if __name__ == '__main__':
+    example = """
+    .body {
+        color: #FF0000; /* Red */
+        font_size: 12px;
+        background_image: url('image.jpg');
+        name: John Smith;  // Name
+    }
+    """
+
+    test_lexer(strip_comments(example))
+
