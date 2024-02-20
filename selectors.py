@@ -21,6 +21,8 @@ class Selector():
     def __hash__(self):
         return hash(str(self))
 
+    def __ne__(self, other):
+        return not self == other
 
 class ClassSelector(Selector):
     # e.g. `.foo`
@@ -32,6 +34,12 @@ class ClassSelector(Selector):
     def __str__(self):
         return f".{self.class_name}"
 
+    def __eq__(self, other):
+        if not isinstance(other, ClassSelector):
+            return False
+
+        return self.class_name == other.class_name
+
 
 class TypeSelector(Selector):
     # e.g. `div`
@@ -40,6 +48,15 @@ class TypeSelector(Selector):
     
     def __str__(self):
         return self.element_type
+
+    def __eq__(self, other):
+        if not isinstance(other, TypeSelector):
+            return False
+
+        return self.element_type == other.element_type
+
+    def __ne__(self, other):
+        return not self == other
 
 
 class IDSelector(Selector):
@@ -52,6 +69,12 @@ class IDSelector(Selector):
     def __str__(self):
         return f"#{self.id_name}"
 
+    def __eq__(self, other):
+        if not isinstance(other, IDSelector):
+            return False
+
+        return self.id_name == other.id_name
+
 
 class PseudoClassSelector(Selector):
     # e.g. `:hover`
@@ -61,6 +84,12 @@ class PseudoClassSelector(Selector):
     def __str__(self):
         return f":{self.pseudo_class}"
 
+    def __eq__(self, other):
+        if not isinstance(other, PseudoClassSelector):
+            return False
+
+        return self.pseudo_class == other.pseudo_class
+
 
 class PseudoElementSelector(Selector):
     # e.g. `::before`
@@ -69,6 +98,12 @@ class PseudoElementSelector(Selector):
     
     def __str__(self):
         return f"::{self.pseudo_element}"
+
+    def __eq__(self, other):
+        if not isinstance(other, PseudoElementSelector):
+            return False
+
+        return self.pseudo_element == other.pseudo_element
 
 
 class AttributeSelector(Selector):
@@ -87,6 +122,12 @@ class AttributeSelector(Selector):
             return f"[{self.attribute}]"
         return f"[{self.attribute}{self.operator}{self.value}]"
 
+    def __eq__(self, other):
+        if not isinstance(other, AttributeSelector):
+            return False
+
+        return self.attribute == other.attribute and self.operator == other.operator and self.value == other.value
+
 
 class CompoundSelector(Selector):
     # e.g. '.foo.bar [baz=biff] [bam] blah
@@ -96,6 +137,14 @@ class CompoundSelector(Selector):
     def __str__(self):
         return " ".join(map(str, self.selectors))
 
+    def __eq__(self, other):
+        if not isinstance(other, CompoundSelector):
+            return False
+
+        # TODO: We should think through if we should sort so:
+        #  "foo bar" == "bar foo"
+        return all(s1 == s2 for s1, s2 in zip(self.selectors, other.selectors))
+
 
 class NullSelector(CompoundSelector):
     def __init__(self):
@@ -104,7 +153,13 @@ class NullSelector(CompoundSelector):
     def __str__(self):
         return '---'
 
+    def __eq__(self, other):
+        return isinstance(other, NullSelector)
+
 
 class UniversalSelector(Selector):
     def __str__(self):
         return "*"
+    def __eq__(self, other):
+        return isinstance(other, UniversalSelector)
+

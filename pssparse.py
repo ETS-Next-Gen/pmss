@@ -73,10 +73,14 @@ def flatten_rules(block_list, parent_selector):
             else:
                 flatten_rules([rule], parent_selector + selector)
 
+def flatten_and_print_parse(block_list):
+    for selector, key, value in flatten_rules(result, selectors.NullSelector()):
+        print(f"{selector} {{ {key}: {value}; }}")
+
+
 text = open("creds.pss.example").read()
 no_comments = strip_comments(text)
 parser = yacc.yacc()
 result = parser.parse(no_comments, lexer=lexer)
-for selector, key, value in flatten_rules(result, selectors.NullSelector()):
-    print(f"{selector} {{ {key}: {value}; }}")
 
+flatten_and_print_parse(result)
