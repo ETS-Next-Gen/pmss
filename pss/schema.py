@@ -1,24 +1,27 @@
-from types.py import TYPES
+from pss.types import TYPES
 
 fields = {}
 
-def canonical_field_name(field_name):
-    return ".".join(field_name)
-
-def register_field(
-        field,
-        data_type,
-        validation,
-        info,
-        required,
-        default
-):
+def register_field(*args, **kwargs):
     pass
 
-register_field(
-    field = "hostname",
-    data_type = 
-)
+# def canonical_field_name(field_name):
+#     return ".".join(field_name)
+
+# def register_field(
+#         field,
+#         data_type,
+#         validation,
+#         info,
+#         required,
+#         default
+# ):
+#     pass
+
+# register_field(
+#     field = "hostname",
+#     data_type = 
+# )
 
 """
 hostname:

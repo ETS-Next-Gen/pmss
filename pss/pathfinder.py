@@ -1,3 +1,8 @@
+'''
+Utility functions to help find settings files in standard system
+paths.
+'''
+
 import os.path
 import pkg_resources
 import types

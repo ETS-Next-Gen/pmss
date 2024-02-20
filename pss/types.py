@@ -16,10 +16,28 @@ class DictEnum:
         self.d = d
 
     def __getattr__(self, attr):
+        '''
+        Just the string.
+        '''
         if attr in self.d:
             return attr
         else:
             raise ValueError("No type: ", attr)
+
+    # Adds capability to use 'in' keyword
+    def __contains__(self, key):
+        return key in self.d
+
+    # Adding a __dir__ to list all attributes
+    def __dir__(self):
+        return list(self.d.keys())
+
+    def __getitem__(self, key):
+        '''
+        Dictionary of info for item
+        '''
+        return self.d[key]
+
 
 TYPES = DictEnum(_TYPES_DICT)
 
@@ -30,7 +48,7 @@ def parser(type_name, validation_regexp=None):
             def new_func(value):
                 if isinstance(value, str):
                     if not re.match(validation_regexp, value):
-                        raise ValueError(f"Value '{value}' does not match the required pattern")
+                        raise ValueError(f"Value '{value}' does not match the required pattern {validation_regexp}")
                 return func(value)
         else:
             new_func = func
@@ -227,7 +245,6 @@ def _convert_to_hostname(value):
         return value
     else:
         raise ValueError(f"Not a hostname: {value}")
-
 
 if __name__ == '__main__':
     import doctest
