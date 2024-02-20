@@ -46,5 +46,6 @@ def load_pss_file(filename, print_debug=False):
 
 
 if __name__ == '__main__':
+    import json
     text = load_pss_file("creds.pss.example")
-    print(text)
+    print(pssselectors.json_dumps(text))

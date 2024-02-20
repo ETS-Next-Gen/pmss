@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pss"
+version = "0.0.1"
+authors = [
+  { name="Piotr Mitros", email="piotr@mitros.org" },
+]
+description = "Cascading Python settings"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "ply"
+]
+
+[project.urls]
+Homepage = "https://github.com/ETS-Nextgen/pss"

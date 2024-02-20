@@ -210,3 +210,33 @@ class UniversalSelector(Selector):
 
     def __hash__(self):
         return super().__hash__()
+
+
+# Broken. Should be fixed at some point. Neither json nor orjson currently
+# support non-string keys.
+#
+# def selector_encoder(obj, default=None):
+#     '''
+#     This is a default encoder for JSON encoders to be able to
+#     handle selectors. Note that Python's default `json` library won't
+#     call this on keys (just values), so we provide an orjson
+#     convenience function below.
+
+#     To be able to chain these, we provider a `default`.
+#     '''
+#     print("I got called!")
+#     if isinstance(obj, Selector):
+#         return str(obj)
+#     elif default is not None:
+#         return default(obj)
+#     raise TypeError(f"Object of type {type(obj)} is not serializable")
+
+# def json_dumps(j):
+#     '''
+#     Encode a JSON object with selectors.
+#     '''
+#     return orjson.dumps(
+#         j,
+#         default=selector_encoder,
+#         option=orjson.OPT_NON_STR_KEYS | orjson.OPT_INDENT_2).decode('utf-8')
+    

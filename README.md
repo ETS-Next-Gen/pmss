@@ -100,3 +100,10 @@ Note that settings are usable (just not guaranteed correct) before
 validation, as e.g. command line arguments might point to a settings
 file and a series of modules to load, and validation might be
 impossible until those are loaded.
+
+
+Files
+-----
+
+* psslex.py and pssyacc.py are the lexer and parser for our variant of
+  CSS.
