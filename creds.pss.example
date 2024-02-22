@@ -20,11 +20,11 @@ kvs {
     type: stub;
     expiry: 6000;
 
-    .memoization {
+    memoization {
         type: redis-ephemeral;
     }
 
-    .settings {
+    settings {
         type: postgres;
         postgres_auth: local;
     }

@@ -1,5 +1,5 @@
-PSS Settings
-============
+PSS
+===
 
 This is intended as a language for settings.
 

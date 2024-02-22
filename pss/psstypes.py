@@ -4,11 +4,13 @@ These are used to preprocess data into standardized types.
 
 
 import configparser
-from collections import defaultdict
+import collections
 import doctest
-from datetime import timedelta
+import datetime
+import os.path
+import re
 
-_TYPES_DICT = defaultdict(dict)
+_TYPES_DICT = collections.defaultdict(dict)
 
 
 class DictEnum:
@@ -36,27 +38,66 @@ class DictEnum:
         '''
         Dictionary of info for item
         '''
-        return self.d[key]
+        if key in self.d:
+            return self.d[key]
+        else:
+            raise KeyError(f"Invalid type: {key}")
 
 
 TYPES = DictEnum(_TYPES_DICT)
 
+def parse(
+        value,
+        psstype,
+        extra_args={}):
+    '''
+    >>> parse("570000", TYPES.port)
+    Traceback (most recent call last):
+    ...
+    ValueError: Value '570000' ('570000') is more than 65535
+    >>> parse("57", TYPES.port)
+    57
+    >>> parse("true", TYPES.boolean)
+    True
+    >>> parse("/etc/", TYPES.filename, {"exists": True})
+    '/etc'
+    >>> parse("/f1aa1.xza", TYPES.filename)
+    '/f1aa1.xza'
+    >>> parse("/f1aa1.xza", TYPES.filename, {"exists": True})
+    Traceback (most recent call last):
+    ...
+    ValueError: File does not exist: /f1aa1.xza (/f1aa1.xza)
+    '''
+    return TYPES[psstype]['parser'](value, **extra_args)
 
-def parser(type_name, validation_regexp=None):
+def parser(
+        type_name,
+        validation_regexp=None,
+        min=None,
+        max=None,
+        parent=None
+):
     def inner(func):
-        if validation_regexp:
-            def new_func(value):
-                if isinstance(value, str):
-                    if not re.match(validation_regexp, value):
-                        raise ValueError(f"Value '{value}' does not match the required pattern {validation_regexp}")
-                return func(value)
-        else:
-            new_func = func
+        def new_func(value, **kwargs):
+            if validation_regexp and isinstance(value, str):
+                if not re.match(validation_regexp, value):
+                    raise ValueError(f"Value '{value}' does not match the required pattern {validation_regexp})")
+            if parent:
+                value = _TYPES_DICT[parent]['parser'](value)
+            parsed = func(value, **kwargs)
+            if min is not None and parsed < min:
+                raise ValueError(f"Value '{value}' ('{parsed}') is less than {min}")
+            if max is not None and parsed > max:
+                raise ValueError(f"Value '{value}' ('{parsed}') is more than {max}")
+            return parsed
 
         _TYPES_DICT[type_name]['parser'] = new_func
         return new_func
     return inner
 
+@parser("string")
+def _convert_to_string(value):
+    return str(value)
 
 @parser("boolean")
 def _convert_to_boolean(value):
@@ -166,7 +207,7 @@ def _convert_to_timedelta(value):
 
     try:
         if isinstance(value, (int, float)):
-            return timedelta(seconds=float(value))
+            return datetime.timedelta(seconds=float(value))
 
         value = str(value).strip().lower()
 
@@ -183,19 +224,19 @@ def _convert_to_timedelta(value):
                 seconds = 0
             else:
                 raise ValueError(f"Not a valid time representation: {value}")
-            return timedelta(hours=hours, minutes=minutes, seconds=seconds)
+            return datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds)
 
         if "day" in value or 'd' in value:
             days = float(value.split()[0])
-            return timedelta(days=days)
+            return datetime.timedelta(days=days)
 
         if "h" in value or 'hours' in value:
             hours = float(value.split()[0])
-            return timedelta(hours=hours)
+            return datetime.timedelta(hours=hours)
 
         if "minute" in value or 'm' in value:
             minutes = float(value.split()[0])
-            return timedelta(minutes=minutes)
+            return datetime.timedelta(minutes=minutes)
 
         raise ValueError(f"Not a valid timedelta: {value}")
 
@@ -225,6 +266,14 @@ def _convert_to_int(value):
         raise ValueError(f"Not an integer: {value}")
 
 
+@parser("port",
+        parent="integer",
+        min=0,
+        max=65535)
+def _validate_port(value):
+    return value
+
+
 @parser("hostname", validation_regexp=r"[a-zA-Z0-9\-\.]+")
 def _convert_to_hostname(value):
     """
@@ -245,6 +294,15 @@ def _convert_to_hostname(value):
         return value
     else:
         raise ValueError(f"Not a hostname: {value}")
+
+
+@parser("filename", parent="string", validation_regexp="^[\w\/\.~-]+$")
+def _convert_to_filename(value, exists=False):
+    normalized_path = os.path.normpath(os.path.expanduser(os.path.normcase(value)))
+    if exists and not os.path.exists(normalized_path):
+        raise ValueError(f"File does not exist: {normalized_path} ({value})")
+    return normalized_path
+
 
 if __name__ == '__main__':
     import doctest

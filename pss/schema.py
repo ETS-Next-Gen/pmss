@@ -1,4 +1,4 @@
-from pss.types import TYPES
+from psstypes import TYPES
 
 fields = {}
 
