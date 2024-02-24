@@ -1,5 +1,19 @@
-'''
-These are used to preprocess data into standardized types.
+'''These are used to preprocess data into standardized types.
+
+Design guidelines:
+
+- Where possible, we'd like to reuse other libraries, so formats are
+  standardized.
+- Conversely, this is intended to be reusable (even without the rest of
+  this system)
+- It's okay to have overlapping types. For example, a human-friendly
+  system might want a datetime with the flexible format of dateutil,
+  whereas a critical one might want to be locked down to ISO8601
+
+We would like more thought about how these explicitly map to
+types. It'd be nice to advertise conversion to standard JSON types,
+database types, as well as types of a range of programming
+languages. TSVx has some thoughts about this.
 '''
 
 

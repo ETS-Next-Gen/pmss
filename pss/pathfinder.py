@@ -26,7 +26,7 @@ def user_config_file(name):
     return os.path.join(home_dir, f".{name}")
 
 
-def local_config_file(name):
+def cwd_config_file(name):
     return os.path.join(os.getcwd(), name)
 
 
@@ -50,6 +50,7 @@ def package_config_file(package, name):
         package = package.__name__
     if not isinstance(package, str):
         raise ValueError("Package {package} is not a module or a string")
+        # Or maybe: return None
 
     return pkg_resources.resource_filename(package, name)
 
@@ -64,8 +65,8 @@ if __name__ == "__main__":
     print("User Config File:")
     print(user_config_file("user"))
     print
-    print("Local Config File:")
-    print(local_config_file("local.pss"))
+    print("Current Working Directory Config File:")
+    print(cwd_config_file("cwd.pss"))
     print
     print("Relative Config File:")
     print(relative_config_file("relative.pss"))

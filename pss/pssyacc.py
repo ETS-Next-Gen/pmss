@@ -1,6 +1,6 @@
 import ply.yacc as yacc
-from psslex import lexer, tokens
-import pssselectors
+from pss.psslex import lexer, tokens
+import pss.pssselectors
 import collections
 
 def p_key_value_pair(p):
@@ -30,17 +30,17 @@ def p_error(p):
 
 def p_type_selector(p):
     ''' selector : IDENT '''
-    p[0] = pssselectors.TypeSelector(p[1])
+    p[0] = pss.pssselectors.TypeSelector(p[1])
 
 
 def p_class_selector(p):
     ''' selector : CLASS_SELECTOR '''
-    p[0] = pssselectors.ClassSelector(p[1])
+    p[0] = pss.pssselectors.ClassSelector(p[1])
 
 
 def p_universal_selector(p):
     ''' selector : UNIVERSAL_SELECTOR '''
-    p[0] = pssselectors.UniversalSelector()
+    p[0] = pss.pssselectors.UniversalSelector()
 
 
 def p_selector_multi(p):
@@ -59,7 +59,7 @@ def p_block(p):
 
 def p_simple_attribute_selector(p):
     '''selector : SIMPLE_ATTRIBUTE_SELECTOR'''
-    p[0] = pssselectors.AttributeSelector(attribute=p[1][1:-1], operator=None, value=None)
+    p[0] = pss.pssselectors.AttributeSelector(attribute=p[1][1:-1], operator=None, value=None)
 
 
 def p_attribute_kv_selector(p):
@@ -67,7 +67,7 @@ def p_attribute_kv_selector(p):
     operator = '='
     attribute = p[1].split("=")[0][1:]
     value = p[1].split("=")[1][:-1]
-    p[0] = pssselectors.AttributeSelector(attribute, operator, value)
+    p[0] = pss.pssselectors.AttributeSelector(attribute, operator, value)
 
 
 parser = yacc.yacc()

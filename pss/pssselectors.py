@@ -38,6 +38,9 @@ class Selector():
     def __ne__(self, other):
         return not self == other
 
+    def match(self, id=None, types=[], classes=[], attributes={}):
+        raise UnimplementedError("This function should always be overridden.")
+
 
 class ClassSelector(Selector):
     # e.g. `.foo`
@@ -59,6 +62,10 @@ class ClassSelector(Selector):
     def __hash__(self):
         return super().__hash__()
 
+    def match(self, id=None, types=[], classes=[], attributes={}):
+        if self.class_name in classes:
+            return True
+        return False
 
 class TypeSelector(Selector):
     # e.g. `div`
@@ -78,6 +85,10 @@ class TypeSelector(Selector):
     def __hash__(self):
         return super().__hash__()
 
+    def match(self, id=None, types=[], classes=[], attributes={}):
+        if self.element_type in types:
+            return True
+        return False
 
 class IDSelector(Selector):
     # e.g. `#bar`
@@ -99,13 +110,18 @@ class IDSelector(Selector):
     def __hash__(self):
         return super().__hash__()
 
+    def match(self, id=None, types=[], classes=[], attributes={}):
+        if self.id_name == id:
+            return True
+        return False
+
 
 class PseudoClassSelector(Selector):
     # e.g. `:hover`
     def __init__(self, pseudo_class):
         super().__init__()
         self.pseudo_class = pseudo_class
-    
+
     def __str__(self):
         return f":{self.pseudo_class}"
 
@@ -118,13 +134,16 @@ class PseudoClassSelector(Selector):
     def __hash__(self):
         return super().__hash__()
 
+    def match(self, id=None, types=[], classes=[], attributes={}):
+        return False  # TODO: Implement
+
 
 class PseudoElementSelector(Selector):
     # e.g. `::before`
     def __init__(self, pseudo_element):
         super().__init__()
         self.pseudo_element = pseudo_element
-    
+
     def __str__(self):
         return f"::{self.pseudo_element}"
 
@@ -136,6 +155,9 @@ class PseudoElementSelector(Selector):
 
     def __hash__(self):
         return super().__hash__()
+
+    def match(self, id=None, types=[], classes=[], attributes={}):
+        return False  # TODO: Implement
 
 
 class AttributeSelector(Selector):
@@ -164,6 +186,17 @@ class AttributeSelector(Selector):
     def __hash__(self):
         return super().__hash__()
 
+    def match(self, id=None, types=[], classes=[], attributes={}):
+        if self.attribute not in attributes:
+            return False
+        if self.operator is None:
+            return True
+        if self.operator != '=':
+            raise UnimplementedError("TODO: Implement non-equality operators in AttributeSelector")
+        if self.value == attributes[self.attribute]:
+            return True
+        return False
+
 
 class CompoundSelector(Selector):
     # e.g. '.foo.bar [baz=biff] [bam] blah
@@ -185,6 +218,9 @@ class CompoundSelector(Selector):
     def __hash__(self):
         return super().__hash__()
 
+    def match(self, *args, **kwargs):
+        return all([s.match(*args, **kwargs) for s in self.selectors])
+
 class NullSelector(CompoundSelector):
     def __init__(self):
         super().__init__([])
@@ -198,6 +234,9 @@ class NullSelector(CompoundSelector):
     def __hash__(self):
         return super().__hash__()
 
+    def match(self, *args, **kwargs):
+        return True
+
 class UniversalSelector(Selector):
     def __init__(self):
         super().__init__()
@@ -210,6 +249,9 @@ class UniversalSelector(Selector):
 
     def __hash__(self):
         return super().__hash__()
+
+    def match(self, *args, **kwargs):
+        return True
 
 
 # Broken. Should be fixed at some point. Neither json nor orjson currently
@@ -239,4 +281,52 @@ class UniversalSelector(Selector):
 #         j,
 #         default=selector_encoder,
 #         option=orjson.OPT_NON_STR_KEYS | orjson.OPT_INDENT_2).decode('utf-8')
-    
+
+def test_selector_classes():
+    ID = 'test_id'
+    CLASS_NAME = 'test_class'
+    ELEMENT_TYPE = 'div'
+    ATTRIBUTE_KEY = 'foo'
+    ATTRIBUTE_VALUE = '='
+
+    id_selector = IDSelector(ID)
+    class_selector = ClassSelector(CLASS_NAME)
+    type_selector = TypeSelector(ELEMENT_TYPE)
+    attribute_selector = AttributeSelector(ATTRIBUTE_KEY, ATTRIBUTE_VALUE, ELEMENT_TYPE)
+
+    # Testing match function with correct matches
+    assert id_selector.match(id=ID)
+    assert class_selector.match(classes=[CLASS_NAME])
+    assert type_selector.match(types=[ELEMENT_TYPE])
+    assert attribute_selector.match(attributes={ATTRIBUTE_KEY:ELEMENT_TYPE})
+
+    # Testing match function with incorrect matches
+    assert not id_selector.match(id=f"{ID}_incorrect")
+    assert not class_selector.match(classes=[f"{CLASS_NAME}_incorrect"])
+    assert not type_selector.match(types=[f"{ELEMENT_TYPE}_incorrect"])
+    assert not attribute_selector.match(attributes={ATTRIBUTE_KEY:ATTRIBUTE_VALUE})
+
+    # Testing match function with empty arguments
+    assert not id_selector.match()
+    assert not class_selector.match()
+    assert not type_selector.match()
+    assert not attribute_selector.match()
+
+    # Testing match function for compound selectors
+    compound_selector = id_selector + class_selector + type_selector + attribute_selector
+    assert compound_selector.match(
+        id=ID,
+        types=[ELEMENT_TYPE],
+        classes=[CLASS_NAME],
+        attributes={ATTRIBUTE_KEY:ELEMENT_TYPE}
+    )
+    assert not compound_selector.match(
+        id=ID,
+        types=[ELEMENT_TYPE],
+        classes=[CLASS_NAME + "_incorrect"],
+        attributes={ATTRIBUTE_KEY:ELEMENT_TYPE}
+    )
+
+if __name__ == "__main__":
+    test_selector_classes()
+    print("All test cases passed successfully.")

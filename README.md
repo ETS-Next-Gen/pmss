@@ -106,4 +106,9 @@ Files
 -----
 
 * psslex.py and pssyacc.py are the lexer and parser for our variant of
-  CSS.
+  CSS. These are designed to be interchangeable if you'd like e.g.
+  full CSS or an INI file or whatnot.
+* psstypes.py handles type validation and conversion. We use other
+  libraries where possible, to maintain compatible formats. Conversely,
+  this is usable without the rest of the system.
+
