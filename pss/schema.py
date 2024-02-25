@@ -1,39 +1,69 @@
 import os.path
 import sys
+import enum
 
 import pss.psstypes
 import pss.pathfinder
 import pss.loadfile
 #import pss.sources
 
-def deep_update(d, u):
+def deepupdate(d, u):
     '''
     Like dict.update, but handling nested dictionaries.
     '''
     for k, v in u.items():
         if isinstance(v, dict):
-            d[k] = deep_update(d.get(k, {}), v)
+            d[k] = deepupdate(d.get(k, {}), v)
         else:
             d[k] = v
     return d
 
+SOURCE_IDS = enum.Enum('SOURCE_IDS', ['ENV', 'SourceConfigFile', 'SystemConfigFile', 'UserConfigFile', 'EnvironmentVariables', 'CommandLineArgs'])
 
 class Source():
-    def __init__(self, settings):
+    def __init__(self, settings, sourceid):
         self.loaded = False
         self.settings = settings
+        self.sourceid = sourceid
+
+    def query(self, *args, **kwargs):
+        raise UnimplementedError("This should always be called on a subclass")
+
 
 class PSSFileSource(Source):
-    def __init__(self, settings, filename):
-        super().__init__(settings)
+    def __init__(self, settings, filename, sourceid=None):
+        super().__init__(settings=settings, sourceid=sourceid)
         self.filename = filename
         self.results = pss.loadfile.load_pss_file(filename)
 
+    def query(self, key, context):
+        selector_list = self.results.get(key)
+        return_list = []
+        for selector, value in selector_list:
+            if selector.match(**context):
+                return_list.append([selector, value])
+        return return_list
+
+
 class EnvsSource(Source):
-    pass
+    def __init__(self, settings, sourceid=SOURCE_IDS.EnvironmentVariables, env=os.environ):
+        super().__init__(settings=settings, sourceid=sourceid)
+
+    def query(self, key, context):
+        return False
 
 class ArgsSource(Source):
-    pass
+    def __init__(self, settings, sourceid=SOURCE_IDS.CommandLineArgs, argv=sys.argv):
+        super().__init__(settings=settings, sourceid=sourceid)
+        self.argv = argv
+
+    def load(self):
+        for argument in self.argv[1:]:
+            if "=" in argument:
+                pass
+
+    def query(self, key, context):
+        return False
 
 class SQLiteSource(Source):
     pass
@@ -73,16 +103,16 @@ class Settings():
 
     def default_sources(self):
         filename = f"{self.prog}.pss"
+        # TODO: Add: pss.pathfinder.package_config_file(filename)?
         source_files = [
-            pss.pathfinder.relative_config_file(filename),
-            # TODO: Add: pss.pathfinder.package_config_file(filename),
-            pss.pathfinder.system_config_file(filename),
-            pss.pathfinder.user_config_file(filename)
+            [SOURCE_IDS.SourceConfigFile, pss.pathfinder.source_config_file(filename)],
+            [SOURCE_IDS.SystemConfigFile, pss.pathfinder.system_config_file(filename)],
+            [SOURCE_IDS.UserConfigFile, pss.pathfinder.user_config_file(filename)]
         ]
         sources = [
-            ArgsSource(self),
-            EnvsSource(self),
-        ] + [ PSSFileSource(self, fn) for fn in source_files if fn is not None and os.path.exists(fn) ]
+            ArgsSource(settings=self),
+            EnvsSource(settings=self),
+        ] + [ PSSFileSource(settings=self, filename=sd[1], sourceid=sd[0]) for sd in source_files if sd[1] is not None and os.path.exists(sd[1]) ]
         return sources
 
 
@@ -90,9 +120,10 @@ class Settings():
             self,
             name,
             type,
-            command_line_flags = [],
+            command_line_flags = None,  # Extra matching command-line flags (beyond --key)
             description = None,
             required = None,  # Can be a selector or a list of selectors. True is shorthand for '*'
+            env = None,  # Environment variables this can be pulled from
             default = None
     ):
         if required and default:
@@ -125,8 +156,11 @@ class Settings():
     def usage(self):
         pass
 
-    def get(self, selector, key, default=None):
-        pass
+    def get(self, key, context, default=None):
+        for source in sources:
+            l = source.get(key, context)
+            if l:  # TODO: Pick best march
+                return l  # TODO: Convert to propert type
 
     def __getattr__(self, key):
         '''
@@ -143,3 +177,8 @@ class Settings():
 
     def __hasattr__(self, key):
         return key in dir(self)
+
+
+if __name__ == "__main__":
+    settings = Settings(prog='test_prog')
+    settings.register_field('test_field', str, command_line_flags=['-t', '--test'], description='Test Field Description')

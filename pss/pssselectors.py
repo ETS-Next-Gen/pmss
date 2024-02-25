@@ -1,4 +1,4 @@
-# TODO: Equality should compare metadata too.
+import json
 
 class Selector():
     def __init__(self):
@@ -33,7 +33,7 @@ class Selector():
         return f"<{self.__class__.__name__} {self}>"
 
     def __hash__(self):
-        return hash(str(self))
+        return hash(json.dumps(self.metadata) + ":" + str(self))
 
     def __ne__(self, other):
         return not self == other

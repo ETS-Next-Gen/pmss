@@ -1,4 +1,5 @@
 import collections
+import io
 import re
 
 import pss.pssyacc
@@ -33,8 +34,15 @@ def rule_sheet(parse_results, metadata={}):
     return dict(d)
 
 
-def load_pss_file(filename, print_debug=False):
-    text = open(filename).read()
+def load_pss_file(file, print_debug=False):
+    if isinstance(file, str):  # filename
+        with open(file, 'r') as f:
+            text = f.read()
+    elif isinstance(file, io.TextIOBase):  # file-like object
+        text = file.read()
+    else:
+        raise ValueError(f"Incorrect type. Expected filename or file-like object: {file}")
+
     no_comments = pss.psslex.strip_comments(text)
     result = pss.pssyacc.parser.parse(no_comments, lexer=pss.psslex.lexer)
     print(result)
@@ -48,3 +56,5 @@ def load_pss_file(filename, print_debug=False):
 if __name__ == '__main__':
     rules = load_pss_file("creds.pss.example")
     print(rules)
+    rules2 = load_pss_file(io.StringIO('* {foo:bar;}'))
+    print(rules2)

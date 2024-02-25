@@ -21,7 +21,6 @@ def pretty_usage(prog, description, parameters, epilog):
     - None
 
     This is loosely based on how argparse thinks about usage().
-
     """
     # Get terminal size
     columns, rows = os.get_terminal_size()

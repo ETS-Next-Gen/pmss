@@ -30,7 +30,7 @@ def cwd_config_file(name):
     return os.path.join(os.getcwd(), name)
 
 
-def relative_config_file(name):
+def source_config_file(name):
     if getattr(sys, 'frozen', False):
         # Running as a compiled executable
         base = os.path.dirname(sys.executable)
@@ -54,9 +54,6 @@ def package_config_file(package, name):
 
     return pkg_resources.resource_filename(package, name)
 
-sample_rule_list = [
-    
-]
 
 if __name__ == "__main__":
     print("System Config File:")
@@ -68,8 +65,8 @@ if __name__ == "__main__":
     print("Current Working Directory Config File:")
     print(cwd_config_file("cwd.pss"))
     print
-    print("Relative Config File:")
-    print(relative_config_file("relative.pss"))
+    print("Source Relative Config File:")
+    print(source_config_file("source.pss"))
     print
     print("ply Package Config File:")
     print(package_config_file("ply", "package.pss"))
