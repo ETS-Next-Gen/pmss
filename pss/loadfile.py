@@ -42,7 +42,9 @@ def load_pss_file(file, print_debug=False):
         text = file.read()
     else:
         raise ValueError(f"Incorrect type. Expected filename or file-like object: {file}")
+    return load_pss_string(text, print_debug)
 
+def load_pss_string(text, print_debug=False):
     no_comments = pss.psslex.strip_comments(text)
     result = pss.pssyacc.parser.parse(no_comments, lexer=pss.psslex.lexer)
     print(result)
@@ -57,4 +59,6 @@ if __name__ == '__main__':
     rules = load_pss_file("creds.pss.example")
     print(rules)
     rules2 = load_pss_file(io.StringIO('* {foo:bar;}'))
+    print(rules2)
+    rules3 = load_pss_string('* {foo:bar;}')
     print(rules2)

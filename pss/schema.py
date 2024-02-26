@@ -1,3 +1,6 @@
+# TODO: Break this into multiple files, with appropriate names.
+# TODO: Integrate type conversions.
+
 import os.path
 import sys
 import enum
@@ -5,6 +8,7 @@ import enum
 import pss.psstypes
 import pss.pathfinder
 import pss.loadfile
+import pss.pssselectors
 #import pss.sources
 
 def deepupdate(d, u):
@@ -45,14 +49,54 @@ class PSSFileSource(Source):
         return return_list
 
 
-class EnvsSource(Source):
-    def __init__(self, settings, sourceid=SOURCE_IDS.EnvironmentVariables, env=os.environ):
+class SimpleEnvsSource(Source):
+    '''
+    Note that, for now, we do not permit selectors in environment
+    variables (for now), since per IEEE Std 1003.1-2001, environment
+    variables consist solely of uppercase letters, digits, and the '_'
+    (underscore) and do not begin with a digit.
+
+    In the future, we could make a ComplexEnvsSource where the
+    selector is included in the value or encoded in some way. The
+    future is not today.
+
+    TODO:
+    * Handle case sensitivity cleanly
+    * Handle default
+    '''
+    def __init__(
+            self,
+            settings,
+            sourceid=SOURCE_IDS.EnvironmentVariables,
+            env=os.environ,
+            default_keys=True  # Do we assume all environment variables may be keys?
+    ):
         super().__init__(settings=settings, sourceid=sourceid)
+        self.extracted = {}
+        self.default_keys=default_keys
+
+    def load(self):
+        if self.default_keys:
+            possible_keys = [k.upper() for k in dir(settings)]
+
+            for key in env:
+                if key in possible_keys:
+                    self.extracted[key] = env[key]
+        mapped_keys = dict([(f['env'], f['name']) for f in self.settings.fields if f['env']])
+        for key in env:
+            if key in mapped_keys:
+                self.extracted[mapped_keys[key].upper()] = env[key]
 
     def query(self, key, context):
+        if key.upper() in self.extracted:
+            return [[pss.pssselectors.UniversalSelector(), key]]
+
         return False
 
 class ArgsSource(Source):
+    # --foo=bar
+    # --selector:foo=bar
+    # --dev (enable class dev, if registered as one of the classes which can be enabled / disabled via commandline)
     def __init__(self, settings, sourceid=SOURCE_IDS.CommandLineArgs, argv=sys.argv):
         super().__init__(settings=settings, sourceid=sourceid)
         self.argv = argv
@@ -111,7 +155,7 @@ class Settings():
         ]
         sources = [
             ArgsSource(settings=self),
-            EnvsSource(settings=self),
+            SimpleEnvsSource(settings=self),
         ] + [ PSSFileSource(settings=self, filename=sd[1], sourceid=sd[0]) for sd in source_files if sd[1] is not None and os.path.exists(sd[1]) ]
         return sources
 
@@ -151,6 +195,18 @@ class Settings():
     def validate(self):
         '''
         '''
+        # TODO: Check we don't have keys with the same name (even with
+        # different case). We haven't decided on case sensitivity, but
+        # -foobar -Foobar -foo-bar -foo_bar all existing WILL cause
+        # confusion AND issues in context like environment variables
+        #
+        # TODO: Check all registered fields exist
+        #
+        # TODO: Check no unregistered variables exist, unless prefixed
+        # with an _
+        #
+        # TODO: Interpolate everything (and in the process, check all
+        # interpolations are valid)
         pass
 
     def usage(self):
