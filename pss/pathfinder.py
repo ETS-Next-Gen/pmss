@@ -17,7 +17,7 @@ def system_config_file(name):
     ]
     for path in paths:
         if os.path.isfile(path):
-            return oath
+            return path
     return None
 
 

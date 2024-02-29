@@ -192,7 +192,7 @@ class AttributeSelector(Selector):
         if self.operator is None:
             return True
         if self.operator != '=':
-            raise UnimplementedError("TODO: Implement non-equality operators in AttributeSelector")
+            raise NotImplementedError("TODO: Implement non-equality operators in AttributeSelector")
         if self.value == attributes[self.attribute]:
             return True
         return False
@@ -252,6 +252,18 @@ class UniversalSelector(Selector):
 
     def match(self, *args, **kwargs):
         return True
+
+sort_hierarchy = [
+    AttributeSelector,
+    UniversalSelector
+]
+
+def sort_selector_list(selector):
+    selector_type = type(selector)
+    if selector_type not in sort_hierarchy:
+        raise RuntimeError(f'We are unsure how to sort this selector: `{selector}`')
+    idx = sort_hierarchy.index(selector_type)
+    return (idx, selector)
 
 
 # Broken. Should be fixed at some point. Neither json nor orjson currently

@@ -1,4 +1,5 @@
 # TODO: Break this into multiple files, with appropriate names.
+# move to `sources.py` and `settings.py`
 # TODO: Integrate type conversions.
 
 import os.path
@@ -30,21 +31,41 @@ class Source():
         self.settings = settings
         self.sourceid = sourceid
 
+    def load(self):
+        '''Load settings into your source component.
+        Upon successful load, set `self.loaded = True`.
+        '''
+        raise NotImplementedError('This should always be called on a subclass')
+
     def query(self, *args, **kwargs):
-        raise UnimplementedError("This should always be called on a subclass")
+        '''This method should return list of matching selectors
+        where each item in the list is `(selector, value)` pair.
+        Additionally these methods should check that the data
+        is loaded with `self.loaded` before trying to query data.
+        '''
+        raise NotImplementedError('This should always be called on a subclass')
 
 
 class PSSFileSource(Source):
     def __init__(self, settings, filename, sourceid=None):
         super().__init__(settings=settings, sourceid=sourceid)
         self.filename = filename
-        self.results = pss.loadfile.load_pss_file(filename)
+        self.results = {}
+
+    def load(self):
+        self.results = pss.loadfile.load_pss_file(self.filename)
+        self.loaded = True
 
     def query(self, key, context):
-        selector_list = self.results.get(key)
+        if not self.loaded:
+            raise RuntimeError(f'Please `load()` data from source `{self.sourceid} before trying to `query()`.')
+        selector_dict = self.results.get(key)
         return_list = []
-        for selector, value in selector_list:
-            if selector.match(**context):
+        for selector, value in selector_dict.items():
+            # FIXME this code is broken as the context is not
+            # a mappable object when using the `UniversalSelector`
+            params = {} if isinstance(context, pss.pssselectors.UniversalSelector) else context
+            if selector.match(**params):
                 return_list.append([selector, value])
         return return_list
 
@@ -74,20 +95,24 @@ class SimpleEnvsSource(Source):
         super().__init__(settings=settings, sourceid=sourceid)
         self.extracted = {}
         self.default_keys=default_keys
+        self.env = env
 
     def load(self):
         if self.default_keys:
-            possible_keys = [k.upper() for k in dir(settings)]
+            possible_keys = [k.upper() for k in dir(self.settings)]
 
-            for key in env:
+            for key in self.env:
                 if key in possible_keys:
-                    self.extracted[key] = env[key]
+                    self.extracted[key] = self.env[key]
         mapped_keys = dict([(f['env'], f['name']) for f in self.settings.fields if f['env']])
-        for key in env:
+        for key in self.env:
             if key in mapped_keys:
-                self.extracted[mapped_keys[key].upper()] = env[key]
+                self.extracted[mapped_keys[key].upper()] = self.env[key]
+        self.loaded = True
 
     def query(self, key, context):
+        if not self.loaded:
+            raise RuntimeError(f'Please `load()` data from source `{self.sourceid} before trying to `query()`.')
         if key.upper() in self.extracted:
             return [[pss.pssselectors.UniversalSelector(), key]]
 
@@ -102,11 +127,16 @@ class ArgsSource(Source):
         self.argv = argv
 
     def load(self):
+        # TODO
         for argument in self.argv[1:]:
             if "=" in argument:
                 pass
+        self.loaded = True
 
     def query(self, key, context):
+        if not self.loaded:
+            raise RuntimeError(f'Please `load()` data from source `{self.sourceid} before trying to `query()`.')
+        # TODO
         return False
 
 class SQLiteSource(Source):
@@ -136,6 +166,8 @@ class Settings():
         self.exit_on_failure = exit_on_failure
         self.sources = []
         self.settings = {}
+        self.loaded = False
+        self.define_ordering = None
 
         if not sources:
             sources = self.default_sources()
@@ -143,7 +175,8 @@ class Settings():
         self.add_sources(sources)
 
     def add_sources(self, sources):
-        pass
+        for source in sources:
+            self.add_source(source, holdoff=True)
 
     def default_sources(self):
         filename = f"{self.prog}.pss"
@@ -159,7 +192,6 @@ class Settings():
         ] + [ PSSFileSource(settings=self, filename=sd[1], sourceid=sd[0]) for sd in source_files if sd[1] is not None and os.path.exists(sd[1]) ]
         return sources
 
-
     def register_field(
             self,
             name,
@@ -170,6 +202,10 @@ class Settings():
             env = None,  # Environment variables this can be pulled from
             default = None
     ):
+        '''Fields are used to validate sources. This adds a
+        field to the settings instance. This method should be
+        called before `self.validate()`.
+        '''
         if required and default:
             raise ValueError(f"Required parameters shouldn't have a default! {name}")
 
@@ -179,11 +215,11 @@ class Settings():
             "command_line_flags": command_line_flags,
             "description": description,
             "required": required,
-            "default": default
+            "default": default,
+            "env": env
         })
 
     def add_source(self, source, holdoff=False):
-        # Implementation of add_source method would go here
         self.sources.append(source)
         if not holdoff:
             self.load()
@@ -191,10 +227,19 @@ class Settings():
     def load(self):
         for source in self.sources:
             source.load()
+        self.loaded = True
 
     def validate(self):
+        '''Validate all the loaded settings against added fields.
+        This will:
+        - Check we don't have keys with the same name (even with
+          different cases).
+        - Check all registered fields exist
+        - Check no unregistered variables exist, unless prefixed with `_`
+        - Interpolate everything (?)
         '''
-        '''
+        if not self.loaded:
+            raise RuntimeError('Please run `settings.load()` before running `settings.validation()`.')
         # TODO: Check we don't have keys with the same name (even with
         # different case). We haven't decided on case sensitivity, but
         # -foobar -Foobar -foo-bar -foo_bar all existing WILL cause
@@ -212,11 +257,33 @@ class Settings():
     def usage(self):
         pass
 
-    def get(self, key, context, default=None):
-        for source in sources:
-            l = source.get(key, context)
-            if l:  # TODO: Pick best march
-                return l  # TODO: Convert to propert type
+    def get(self, key, context=None, default=None):
+        if context is None:
+            context = pss.pssselectors.UniversalSelector()
+        best_matches = []
+        for source in self.sources:
+            l = source.query(key, context)
+            print(source.sourceid)
+            if not l:
+                continue
+            # sort list based on selector priority to get best match
+            l = sorted(l, key=lambda x: pss.pssselectors.sort_selector_list(x[0]))
+            best_local_match = l[0]
+            best_matches.append((source.sourceid, best_local_match))
+            if self.define_ordering is None:
+                # If we have no defined order, so we return the best
+                # match from the first available source.
+                break
+
+        if len(best_matches) == 0:
+            return default
+
+        if self.define_ordering is not None:
+            # TODO reorder the best local matches from each source
+            # based the `defined_ordering`.
+            pass
+        best_match = best_matches[0][1]
+        return pss.psstypes.parse(best_match[1], getattr(pss.psstypes.TYPES, key))
 
     def __getattr__(self, key):
         '''
@@ -224,7 +291,7 @@ class Settings():
         '''
         for field in self.fields:
             if field["name"] == key:
-                return key
+                return self.get(key)
 
         raise ValueError(f"Invalid Key: {key}")
 
