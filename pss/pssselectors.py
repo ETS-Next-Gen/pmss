@@ -260,9 +260,10 @@ sort_hierarchy = [
 
 def sort_selector_list(selector):
     selector_type = type(selector)
-    if selector_type not in sort_hierarchy:
+    try:
+        idx = sort_hierarchy.index(selector_type)
+    except ValueError:
         raise RuntimeError(f'We are unsure how to sort this selector: `{selector}`')
-    idx = sort_hierarchy.index(selector_type)
     return (idx, selector)
 
 

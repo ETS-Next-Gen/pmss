@@ -1,7 +1,7 @@
 # TODO: Break this into multiple files, with appropriate names.
 # move to `sources.py` and `settings.py`
 # TODO: Integrate type conversions.
-
+import argparse
 import os.path
 import sys
 import enum
@@ -125,19 +125,88 @@ class ArgsSource(Source):
     def __init__(self, settings, sourceid=SOURCE_IDS.CommandLineArgs, argv=sys.argv):
         super().__init__(settings=settings, sourceid=sourceid)
         self.argv = argv
+        self.results = {}
 
     def load(self):
-        # TODO
-        for argument in self.argv[1:]:
-            if "=" in argument:
-                pass
+        '''Manually parse command line arguments.
+        This allows us to eventually support the use
+        of selectors in command line arguments.
+
+        The args are parsed in 2 steps:
+        1. Group the arguments into a list of lists
+        where each inner list contains all information
+        for a single argument.
+
+        Example
+        ```python
+        ['-x', 'y', 'z', '--a', '--b=c', '--d', 'e f']          # arguments
+        [['-x', 'y', 'z'], ['--a'], ['--b=c'], ['--d', 'e f']]  # output
+
+        2. Parse each argument
+        {x: ['y', 'z'], a: True, b: 'c', 'd': 'e f'}
+        '''
+        # group arguments together
+        args = self.argv[1:]
+        grouped_args = []
+        i = 0
+        while i < len(args):
+            if not args[i].startswith('-'):
+                raise ValueError('error parsing data')
+            next_arg = next((i for i, v in enumerate(args[i+1:]) if v.startswith('-')), None)
+            if next_arg is None:
+                grouped_args.append(args[i:])
+                break
+            else:
+                grouped_args.append(args[i:next_arg+1+i])
+            i = i + next_arg + 1
+
+        # parse grouped args into results
+        for garg in grouped_args:
+            flag_split = garg[0].split('=')
+            flag = flag_split[0]
+            # TODO check if ':' in flag to parse selector
+            selector = pss.pssselectors.UniversalSelector()
+            name = None
+            value = None
+            for field in self.settings.fields:
+                if flag in field['command_line_flags']:
+                    name = field['name']
+                    if len(flag_split) > 1:
+                        value = flag_split[1]
+                        break
+                    if field['type'] == pss.psstypes.TYPES.boolean:
+                        value = True
+                        break
+                    value = garg[1:] if len(garg) > 2 else garg[1:][0]
+                    # check if field is required or set default
+                    if value is None and field['required']:
+                        raise RuntimeError(f'Field `{name}` required, but no value provided.')
+                    elif value is None:
+                        value = field['default']
+
+                    break
+            if name is None:
+                raise RuntimeError(f'Could not locate field with flag `{flag}`.')
+            if name not in self.results:
+                self.results[name] = {}
+            self.results[name][selector] = value
         self.loaded = True
 
     def query(self, key, context):
+        '''The internal `results` have the same structure as PSSSource,
+        so the `self.query` is identical.
+        '''
         if not self.loaded:
             raise RuntimeError(f'Please `load()` data from source `{self.sourceid} before trying to `query()`.')
-        # TODO
-        return False
+        selector_dict = self.results.get(key, {})
+        return_list = []
+        for selector, value in selector_dict.items():
+            # FIXME this code is broken as the context is not
+            # a mappable object when using the `UniversalSelector`
+            params = {} if isinstance(context, pss.pssselectors.UniversalSelector) else context
+            if selector.match(**params):
+                return_list.append([selector, value])
+        return return_list
 
 class SQLiteSource(Source):
     pass
@@ -263,7 +332,6 @@ class Settings():
         best_matches = []
         for source in self.sources:
             l = source.query(key, context)
-            print(source.sourceid)
             if not l:
                 continue
             # sort list based on selector priority to get best match
@@ -283,7 +351,11 @@ class Settings():
             # based the `defined_ordering`.
             pass
         best_match = best_matches[0][1]
-        return pss.psstypes.parse(best_match[1], getattr(pss.psstypes.TYPES, key))
+        # find the matching field so we know how to parse
+        for field in self.fields:
+            if field["name"] == key:
+                field_type = field['type']
+        return pss.psstypes.parse(best_match[1], field_type)
 
     def __getattr__(self, key):
         '''
