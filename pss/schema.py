@@ -1,7 +1,6 @@
 # TODO: Break this into multiple files, with appropriate names.
 # move to `sources.py` and `settings.py`
 # TODO: Integrate type conversions.
-import argparse
 import os.path
 import sys
 import enum
