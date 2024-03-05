@@ -14,6 +14,12 @@ settings.register_field(
     description="The port Learning Observer should run on.",
     default=8888
 )
+settings.register_field(
+    name="hostname",
+    type=pss.psstypes.TYPES.hostname,
+    description="The hostname",
+    required=True
+)
 # for i in 'xyzabcdefgh':
 #     settings.register_field(
 #         name=i,

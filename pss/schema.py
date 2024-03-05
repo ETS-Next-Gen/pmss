@@ -44,6 +44,11 @@ class Source():
         '''
         raise NotImplementedError('This should always be called on a subclass')
 
+    def keys(self):
+        '''This method should return a list of all
+        available keys in the source.
+        '''
+        raise NotImplementedError('This should always be called on a subclass')
 
 class PSSFileSource(Source):
     def __init__(self, settings, filename, sourceid=None):
@@ -68,6 +73,8 @@ class PSSFileSource(Source):
                 return_list.append([selector, value])
         return return_list
 
+    def keys(self):
+        return self.results.keys()
 
 class SimpleEnvsSource(Source):
     '''
@@ -116,6 +123,9 @@ class SimpleEnvsSource(Source):
             return [[pss.pssselectors.UniversalSelector(), key]]
 
         return False
+
+    def keys(self):
+        return self.extracted.keys()
 
 class ArgsSource(Source):
     # --foo=bar
@@ -207,6 +217,9 @@ class ArgsSource(Source):
                 return_list.append([selector, value])
         return return_list
 
+    def keys(self):
+        return self.results.keys()
+
 class SQLiteSource(Source):
     pass
 
@@ -223,7 +236,8 @@ class Settings():
             description=None,    # Header when generating usage
             epilog=None,         # Footer when generating usage
             sources=None,        # Where to grab config from
-            exit_on_failure=True # If true, exit and print usage. If false, raise an exception for system to handle.
+            exit_on_failure=True,# If true, exit and print usage. If false, raise an exception for system to handle.
+            interpolate=False    # If true, allow settings like `{_foo}/bar` where `_foo` is defined elsewhere
     ):
         self.prog = prog
         self.system_name = system_name
@@ -236,6 +250,7 @@ class Settings():
         self.settings = {}
         self.loaded = False
         self.define_ordering = None
+        self.interpolate = interpolate
 
         if not sources:
             sources = self.default_sources()
@@ -304,23 +319,57 @@ class Settings():
           different cases).
         - Check all registered fields exist
         - Check no unregistered variables exist, unless prefixed with `_`
-        - Interpolate everything (?)
+        - Interpolate everything
         '''
         if not self.loaded:
             raise RuntimeError('Please run `settings.load()` before running `settings.validation()`.')
-        # TODO: Check we don't have keys with the same name (even with
-        # different case). We haven't decided on case sensitivity, but
-        # -foobar -Foobar -foo-bar -foo_bar all existing WILL cause
-        # confusion AND issues in context like environment variables
-        #
-        # TODO: Check all registered fields exist
-        #
-        # TODO: Check no unregistered variables exist, unless prefixed
-        # with an _
-        #
-        # TODO: Interpolate everything (and in the process, check all
-        # interpolations are valid)
-        pass
+
+        def clean_key(k):
+            return k.lower().replace('-', '').replace('_', '')
+
+        # check that each key is accessed the same way
+        available_keys = {}
+        for source in self.sources:
+            src_keys = source.keys()
+            for key in src_keys:
+                cleaned = clean_key(key)
+                if cleaned not in available_keys:
+                    available_keys[cleaned] = {}
+                if key not in available_keys[cleaned]:
+                    available_keys[cleaned][key] = set()
+                available_keys[cleaned][key].add(source.sourceid)
+
+        for value in available_keys.values():
+            print(value)
+            if len(value) > 1:
+                keys = '\n'.join(f'  {k}: {v}' for k, v in value.items())
+                error_msg = 'Different keys are being used to access the same setting. '\
+                    f'\n{keys}\n'\
+                    'Please make sure all keys use the same specification.'
+                raise RuntimeError(error_msg)
+
+        # check if any missing required fields
+        available_fields = []
+        for field in self.fields:
+            cleaned = clean_key(field['name'])
+            available_fields.append(cleaned)
+            if field['required'] and cleaned not in available_keys:
+                error_msg = f'Required field `{field["name"]}` not found in available sources.'
+                raise KeyError(error_msg)
+
+        # check for any extra keys
+        for key in available_keys:
+            k = available_keys[key].popitem()[0]
+            if not k.startswith('_') and key not in available_fields:
+                error_msg = f'Key `{k}` is not registered as a field.'
+                raise KeyError(error_msg)
+
+        # interpolate if needed
+        if self.interpolate:
+            error_msg = 'Setting interpolation is not yet implemented. '\
+                'Interpolation can be a source of security concerns. '\
+                'Implement and use with caution.'
+            raise NotImplementedError(error_msg)
 
     def usage(self):
         pass
