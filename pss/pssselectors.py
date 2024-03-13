@@ -1,5 +1,6 @@
 import json
 
+
 class Selector():
     def __init__(self):
         self.metadata = None
@@ -67,6 +68,7 @@ class ClassSelector(Selector):
             return True
         return False
 
+
 class TypeSelector(Selector):
     # e.g. `div`
     def __init__(self, element_type):
@@ -89,6 +91,7 @@ class TypeSelector(Selector):
         if self.element_type in types:
             return True
         return False
+
 
 class IDSelector(Selector):
     # e.g. `#bar`
@@ -221,6 +224,7 @@ class CompoundSelector(Selector):
     def match(self, *args, **kwargs):
         return all([s.match(*args, **kwargs) for s in self.selectors])
 
+
 class NullSelector(CompoundSelector):
     def __init__(self):
         super().__init__([])
@@ -236,6 +240,7 @@ class NullSelector(CompoundSelector):
 
     def match(self, *args, **kwargs):
         return True
+
 
 class UniversalSelector(Selector):
     def __init__(self):
@@ -253,11 +258,13 @@ class UniversalSelector(Selector):
     def match(self, *args, **kwargs):
         return True
 
+
 sort_hierarchy = [
     AttributeSelector,
     UniversalSelector,
     NullSelector
 ]
+
 
 def simple_selector_sort_key(selector):
     '''
