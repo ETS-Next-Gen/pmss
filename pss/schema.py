@@ -128,6 +128,7 @@ class SimpleEnvsSource(Source):
     def keys(self):
         return self.extracted.keys()
 
+
 def group_arguments(args):
     '''
     Example
@@ -141,29 +142,13 @@ def group_arguments(args):
         def make_key(arg):
             nonlocal key_index
             if arg.startswith('-'):
-                key_index = key_index + 1
+                key_index = arg
             return key_index
         return make_key
 
     # We probably just want to return the groupby, but this is for backwards-compatibility. 
-    return [list(l[1]) for l in itertools.groupby(args, make_make_key())]
+    return itertools.groupby(args, make_make_key())
 
-def old_group_arguments(args):
-    '''
-    '''
-    grouped_args = []
-    i = 0
-    while i < len(args):
-        if not args[i].startswith('-'):
-            raise ValueError('error parsing data')
-        next_arg = next((i for i, v in enumerate(args[i+1:]) if v.startswith('-')), None)
-        if next_arg is None:
-            grouped_args.append(args[i:])
-            break
-        else:
-            grouped_args.append(args[i:next_arg+1+i])
-        i = i + next_arg + 1
-    return grouped_args
 
 class ArgsSource(Source):
     # --foo=bar
@@ -193,7 +178,9 @@ class ArgsSource(Source):
         grouped_args = group_arguments(args)
 
         # parse grouped args into results
-        for garg in grouped_args:
+        for k, garg in grouped_args:
+            garg=list(garg)
+            print(k, garg)
             flag_split = garg[0].split('=')
             flag = flag_split[0]
             # TODO check if ':' in flag to parse selector
@@ -406,7 +393,7 @@ class Settings():
             if not l:
                 continue
             # sort list based on selector priority to get best match
-            l = sorted(l, key=lambda x: pss.pssselectors.sort_selector_list(x[0]))
+            l = sorted(l, key=lambda x: pss.pssselectors.simple_selector_sort_key(x[0]))
             best_local_match = l[0]
             best_matches.append((source.sourceid, best_local_match))
             if self.define_ordering is None:

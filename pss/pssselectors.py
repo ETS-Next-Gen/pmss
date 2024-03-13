@@ -255,10 +255,17 @@ class UniversalSelector(Selector):
 
 sort_hierarchy = [
     AttributeSelector,
-    UniversalSelector
+    UniversalSelector,
+    NullSelector
 ]
 
-def sort_selector_list(selector):
+def simple_selector_sort_key(selector):
+    '''
+    Stub function for helping sort lists of selectors. Eventually,
+    we want to use a comparison function rather than a key function,
+    and if a key is used, probably use the proper CSS key value.
+
+    '''
     selector_type = type(selector)
     try:
         idx = sort_hierarchy.index(selector_type)
