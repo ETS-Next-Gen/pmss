@@ -4,6 +4,7 @@
 import os.path
 import sys
 import enum
+import itertools
 
 import pss.psstypes
 import pss.pathfinder
@@ -127,6 +128,43 @@ class SimpleEnvsSource(Source):
     def keys(self):
         return self.extracted.keys()
 
+def group_arguments(args):
+    '''
+    Example
+    ```python
+    ['-x', 'y', 'z', '--a', '--b=c', '--d', 'e f']          # arguments
+    [['-x', 'y', 'z'], ['--a'], ['--b=c'], ['--d', 'e f']]  # output
+    ```
+    '''
+    def make_make_key():
+        key_index = 1
+        def make_key(arg):
+            nonlocal key_index
+            if arg.startswith('-'):
+                key_index = key_index + 1
+            return key_index
+        return make_key
+
+    # We probably just want to return the groupby, but this is for backwards-compatibility. 
+    return [list(l[1]) for l in itertools.groupby(args, make_make_key())]
+
+def old_group_arguments(args):
+    '''
+    '''
+    grouped_args = []
+    i = 0
+    while i < len(args):
+        if not args[i].startswith('-'):
+            raise ValueError('error parsing data')
+        next_arg = next((i for i, v in enumerate(args[i+1:]) if v.startswith('-')), None)
+        if next_arg is None:
+            grouped_args.append(args[i:])
+            break
+        else:
+            grouped_args.append(args[i:next_arg+1+i])
+        i = i + next_arg + 1
+    return grouped_args
+
 class ArgsSource(Source):
     # --foo=bar
     # --selector:foo=bar
@@ -146,28 +184,13 @@ class ArgsSource(Source):
         where each inner list contains all information
         for a single argument.
 
-        Example
-        ```python
-        ['-x', 'y', 'z', '--a', '--b=c', '--d', 'e f']          # arguments
-        [['-x', 'y', 'z'], ['--a'], ['--b=c'], ['--d', 'e f']]  # output
 
         2. Parse each argument
         {x: ['y', 'z'], a: True, b: 'c', 'd': 'e f'}
         '''
         # group arguments together
         args = self.argv[1:]
-        grouped_args = []
-        i = 0
-        while i < len(args):
-            if not args[i].startswith('-'):
-                raise ValueError('error parsing data')
-            next_arg = next((i for i, v in enumerate(args[i+1:]) if v.startswith('-')), None)
-            if next_arg is None:
-                grouped_args.append(args[i:])
-                break
-            else:
-                grouped_args.append(args[i:next_arg+1+i])
-            i = i + next_arg + 1
+        grouped_args = group_arguments(args)
 
         # parse grouped args into results
         for garg in grouped_args:
@@ -178,7 +201,7 @@ class ArgsSource(Source):
             name = None
             value = None
             for field in self.settings.fields:
-                if flag in field['command_line_flags']:
+                if flag in (field['command_line_flags'] or ['--{name}'.format(**field)]):
                     name = field['name']
                     if len(flag_split) > 1:
                         value = flag_split[1]
