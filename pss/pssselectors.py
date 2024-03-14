@@ -8,6 +8,15 @@ class Selector():
     def set_metadata(self, metadata):
         self.metadata = metadata
 
+    def css_specificity(self):
+        '''
+        This gives specificity as per CSS standards. This is
+        probably not the ordering function which makes the most sense
+        in many settings contexts, but it's a good well-defined,
+        well-documented default.
+        '''
+        raise NotImplementedError('This should be defined on a subclass')
+
     def __add__(self, other):
         if isinstance(self, NullSelector):
             return other
@@ -51,6 +60,9 @@ class ClassSelector(Selector):
             class_name = class_name[1:]
         self.class_name = class_name
 
+    def css_specificity(self):
+        return 10;
+
     def __str__(self):
         return f".{self.class_name}"
 
@@ -87,6 +99,9 @@ class TypeSelector(Selector):
     def __hash__(self):
         return super().__hash__()
 
+    def css_specificity(self):
+        return 1;
+
     def match(self, id=None, types=[], classes=[], attributes={}):
         if self.element_type in types:
             return True
@@ -113,6 +128,9 @@ class IDSelector(Selector):
     def __hash__(self):
         return super().__hash__()
 
+    def css_specificity(self):
+        return 100;
+
     def match(self, id=None, types=[], classes=[], attributes={}):
         if self.id_name == id:
             return True
@@ -137,6 +155,9 @@ class PseudoClassSelector(Selector):
     def __hash__(self):
         return super().__hash__()
 
+    def css_specificity(self):
+        return 10;
+
     def match(self, id=None, types=[], classes=[], attributes={}):
         return False  # TODO: Implement
 
@@ -158,6 +179,9 @@ class PseudoElementSelector(Selector):
 
     def __hash__(self):
         return super().__hash__()
+
+    def css_specificity(self):
+        return 10;
 
     def match(self, id=None, types=[], classes=[], attributes={}):
         return False  # TODO: Implement
@@ -189,6 +213,9 @@ class AttributeSelector(Selector):
     def __hash__(self):
         return super().__hash__()
 
+    def css_specificity(self):
+        return 10;
+
     def match(self, id=None, types=[], classes=[], attributes={}):
         if self.attribute not in attributes:
             return False
@@ -218,6 +245,9 @@ class CompoundSelector(Selector):
         #  "foo bar" == "bar foo"
         return all(s1 == s2 for s1, s2 in zip(self.selectors, other.selectors))
 
+    def css_specificity(self):
+        return sum(s.css_specificity() for s in self.selectors)
+
     def __hash__(self):
         return super().__hash__()
 
@@ -238,6 +268,9 @@ class NullSelector(CompoundSelector):
     def __hash__(self):
         return super().__hash__()
 
+    def css_specificity(self):
+        return 0;
+
     def match(self, *args, **kwargs):
         return True
 
@@ -245,6 +278,9 @@ class NullSelector(CompoundSelector):
 class UniversalSelector(Selector):
     def __init__(self):
         super().__init__()
+
+    def css_specificity(self):
+        return 0;
 
     def __str__(self):
         return "*"
@@ -267,11 +303,10 @@ sort_hierarchy = [
 
 
 def simple_selector_sort_key(selector):
-    '''
-    Stub function for helping sort lists of selectors. Eventually,
-    we want to use a comparison function rather than a key function,
-    and if a key is used, probably use the proper CSS key value.
-
+    '''Stub function for helping sort lists of selectors. Eventually,
+    we want to use a comparison function rather than a key
+    function. We'll never use this in practice, but it gives an
+    alternative to css_selector()
     '''
     selector_type = type(selector)
     try:
@@ -280,6 +315,16 @@ def simple_selector_sort_key(selector):
         raise RuntimeError(f'We are unsure how to sort this selector: `{selector}`')
     return (idx, selector)
 
+def css_selector_key(selector):
+    '''
+    Follow CSS rules for specificity. These are a little bit odd
+    for settings, as 10 classes are equal to one ID, so there are
+    weird boundary conditions we might not want in a settings
+    language.
+
+    On the upside, it's well-documented and standardized.
+    '''
+    return -selector.css_specificity()
 
 # Broken. Should be fixed at some point. Neither json nor orjson currently
 # support non-string keys.
