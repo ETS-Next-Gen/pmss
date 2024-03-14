@@ -1,7 +1,10 @@
 import pss.schema
 import pss.psstypes
+from pss.settings import Settings
 
-settings = pss.Settings(
+
+
+settings = Settings(
     prog="lo",
     description="A system for monitoring",
     epilog="For more information, see PSS documentation."

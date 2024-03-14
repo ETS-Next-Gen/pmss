@@ -1,1 +1,1 @@
-from .schema import Settings
+from .settings import Settings
