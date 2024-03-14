@@ -8,6 +8,22 @@ import pss.pssselectors
 SOURCE_IDS = enum.Enum('SOURCE_IDS', ['ENV', 'SourceConfigFile', 'SystemConfigFile', 'UserConfigFile', 'EnvironmentVariables', 'CommandLineArgs'])
 
 
+def _convert_keys_to_str(d):
+    '''
+    {'ArgsSource': {'hostname': {<UniversalSelector *>: 'bar'}}, 'SimpleEnvsSource': {}}
+    to
+    {'ArgsSource': {'hostname': {'*': 'bar'}}, 'SimpleEnvsSource': {}}
+}
+
+    '''
+    if isinstance(d, dict):
+        return {str(k): _convert_keys_to_str(v) for k, v in d.items()}
+    elif isinstance(d, list):
+        return [_convert_keys_to_str(i) for i in d]
+    else:
+        return d
+
+
 class Source():
     def __init__(self, settings, sourceid):
         self.loaded = False
@@ -33,6 +49,12 @@ class Source():
         available keys in the source.
         '''
         raise NotImplementedError('This should always be called on a subclass')
+
+    def id(self):
+        return type(self).__name__
+
+    def debug_dump(self):
+        return "[borked]"
 
 
 class PSSFileSource(Source):
@@ -60,6 +82,12 @@ class PSSFileSource(Source):
 
     def keys(self):
         return self.results.keys()
+
+    def id(self):
+        if self.source_id:
+            return self.sourceid
+        else:
+            return f"{super().id()}:{self.filename}"
 
 
 class SimpleEnvsSource(Source):
@@ -96,7 +124,7 @@ class SimpleEnvsSource(Source):
             for key in self.env:
                 if key in possible_keys:
                     self.extracted[key] = self.env[key]
-        mapped_keys = dict([(f['env'], f['name']) for f in self.settings.fields if f['env']])
+        mapped_keys = dict([(f['env'], f['name']) for f in pss.schema.fields if f['env']])
         for key in self.env:
             if key in mapped_keys:
                 self.extracted[mapped_keys[key].upper()] = self.env[key]
@@ -113,8 +141,14 @@ class SimpleEnvsSource(Source):
     def keys(self):
         return self.extracted.keys()
 
+    def id(self):
+        return "SimpleEnvsSource"
 
-def group_arguments(args):
+    def debug_dump(self):
+        return _convert_keys_to_str(self.extracted)
+
+
+def _group_arguments(args):
     '''
     Example
     ```python
@@ -135,6 +169,8 @@ def group_arguments(args):
     return itertools.groupby(args, make_make_key())
 
 
+# We roughly follow:
+#   https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser
 class ArgsSource(Source):
     # --foo=bar
     # --selector:foo=bar
@@ -160,7 +196,7 @@ class ArgsSource(Source):
         '''
         # group arguments together
         args = self.argv[1:]
-        grouped_args = group_arguments(args)
+        grouped_args = _group_arguments(args)
 
         # parse grouped args into results
         for k, garg in grouped_args:
@@ -172,7 +208,7 @@ class ArgsSource(Source):
             selector = pss.pssselectors.UniversalSelector()
             name = None
             value = None
-            for field in self.settings.fields:
+            for field in pss.schema.fields:
                 if flag in (field['command_line_flags'] or ['--{name}'.format(**field)]):
                     name = field['name']
                     if len(flag_split) > 1:
@@ -214,6 +250,10 @@ class ArgsSource(Source):
 
     def keys(self):
         return self.results.keys()
+
+    def debug_dump(self):
+        return _convert_keys_to_str(self.results)
+
 
 class SQLiteSource(Source):
     pass

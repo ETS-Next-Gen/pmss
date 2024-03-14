@@ -6,17 +6,21 @@ import sys
 import enum
 import itertools
 
-import pss.psstypes
 import pss.pathfinder
-import pss.loadfile
 import pss.pssselectors
-#import pss.sources
 
 from pss.sources import *
+import pss.psstypes
+
+def verbose():
+    return "-v" in sys.argv
+
 
 def deepupdate(d, u):
     '''
     Like dict.update, but handling nested dictionaries.
+
+    Useful for merging several `pss` heirarchies
     '''
     for k, v in u.items():
         if isinstance(v, dict):
@@ -26,10 +30,56 @@ def deepupdate(d, u):
     return d
 
 
-# We roughly follow:
-#   https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser
+def canonical_key(k):
+    '''
+    We want to avoid collisions. It's easy to confuse
+    `server_port`, `serverPort`, etc. For validation, we convert keys
+    to lower-case, and remove word delimieters. If there is a collision,
+    we flag it.
+
+    The format doesn't strictly disallow this, but we very much think
+    this is a bad idea, so we validate for it not being there. This
+    should probably be a flag.
+    '''
+    return k.lower().replace('-', '').replace('_', '')
+
+
+fields = []
+
+
+def register_field(
+        name,
+        type,
+        command_line_flags = None,  # Extra matching command-line flags (beyond --key)
+        description = None,
+        required = None,  # Can be a selector or a list of selectors. True is shorthand for '*'
+        env = None,  # Environment variables this can be pulled from
+        default = None
+):
+    '''
+    Fields are used to validate sources. This adds a field to the
+    settings instance. All calls to this method should be completed
+    before `validate()`.
+    '''
+    if required and default:
+        raise ValueError(f"Required parameters shouldn't have a default! {name}")
+
+    fields.append({
+        "name": name,
+        "type": type,
+        "command_line_flags": command_line_flags,
+        "description": description,
+        "required": required,
+        "default": default,
+        "env": env
+    })
+
+
 
 class Settings():
+    '''
+    We are trying to figure out whether this should be an object, a module, or what, or how this should be broken out.
+    '''
     def __init__(
             self,
             prog=sys.argv[0],    # e.g. lo
@@ -46,7 +96,6 @@ class Settings():
         self.usage = usage
         self.description = description
         self.epilog = epilog
-        self.fields = []
         self.exit_on_failure = exit_on_failure
         self.sources = []
         self.settings = {}
@@ -71,38 +120,13 @@ class Settings():
             [SOURCE_IDS.SystemConfigFile, pss.pathfinder.system_config_file(filename)],
             [SOURCE_IDS.UserConfigFile, pss.pathfinder.user_config_file(filename)]
         ]
+        if verbose():
+            print("Source files: ", source_files)
         sources = [
             ArgsSource(settings=self),
             SimpleEnvsSource(settings=self),
         ] + [ PSSFileSource(settings=self, filename=sd[1], sourceid=sd[0]) for sd in source_files if sd[1] is not None and os.path.exists(sd[1]) ]
         return sources
-
-    def register_field(
-            self,
-            name,
-            type,
-            command_line_flags = None,  # Extra matching command-line flags (beyond --key)
-            description = None,
-            required = None,  # Can be a selector or a list of selectors. True is shorthand for '*'
-            env = None,  # Environment variables this can be pulled from
-            default = None
-    ):
-        '''Fields are used to validate sources. This adds a
-        field to the settings instance. This method should be
-        called before `self.validate()`.
-        '''
-        if required and default:
-            raise ValueError(f"Required parameters shouldn't have a default! {name}")
-
-        self.fields.append({
-            "name": name,
-            "type": type,
-            "command_line_flags": command_line_flags,
-            "description": description,
-            "required": required,
-            "default": default,
-            "env": env
-        })
 
     def add_source(self, source, holdoff=False):
         self.sources.append(source)
@@ -126,15 +150,12 @@ class Settings():
         if not self.loaded:
             raise RuntimeError('Please run `settings.load()` before running `settings.validation()`.')
 
-        def clean_key(k):
-            return k.lower().replace('-', '').replace('_', '')
-
         # check that each key is accessed the same way
         available_keys = {}
         for source in self.sources:
             src_keys = source.keys()
             for key in src_keys:
-                cleaned = clean_key(key)
+                cleaned = canonical_key(key)
                 if cleaned not in available_keys:
                     available_keys[cleaned] = {}
                 if key not in available_keys[cleaned]:
@@ -152,8 +173,8 @@ class Settings():
 
         # check if any missing required fields
         available_fields = []
-        for field in self.fields:
-            cleaned = clean_key(field['name'])
+        for field in fields:
+            cleaned = canonical_key(field['name'])
             available_fields.append(cleaned)
             if field['required'] and cleaned not in available_keys:
                 error_msg = f'Required field `{field["name"]}` not found in available sources.'
@@ -202,7 +223,7 @@ class Settings():
             pass
         best_match = best_matches[0][1]
         # find the matching field so we know how to parse
-        for field in self.fields:
+        for field in fields:
             if field["name"] == key:
                 field_type = field['type']
         return pss.psstypes.parse(best_match[1], field_type)
@@ -211,19 +232,30 @@ class Settings():
         '''
         Enum-style access to fields.
         '''
-        for field in self.fields:
+        for field in fields:
             if field["name"] == key:
                 return self.get(key)
 
         raise ValueError(f"Invalid Key: {key}")
 
     def __dir__(self):
-        return sorted(set([field["name"] for field in self.fields]))
+        return sorted(set([field["name"] for field in fields]))
 
     def __hasattr__(self, key):
         return key in dir(self)
 
+    def debug_dump(self):
+        return {source.id(): source.debug_dump() for source in self.sources}
+
+
+register_field(
+    name="verbose",
+    type=pss.psstypes.TYPES.boolean,
+    command_line_flags=["-v", "--verbose"],
+    description="Print additional debugging information.",
+    default=False
+)
+
 
 if __name__ == "__main__":
     settings = Settings(prog='test_prog')
-    settings.register_field('test_field', str, command_line_flags=['-t', '--test'], description='Test Field Description')
