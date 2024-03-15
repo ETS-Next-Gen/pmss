@@ -73,5 +73,59 @@ register_field(
 )
 
 
-if __name__ == "__main__":
-    settings = Settings(prog='test_prog')
+def validate(settings):
+    '''Validate all the loaded settings against added fields.
+
+    This will:
+    - Check we don't have keys with the same name (even with
+      different cases).
+    - Check all registered fields exist
+    - Check no unregistered variables exist, unless prefixed with `_`
+    - Interpolate everything
+    '''
+    if not settings.loaded:
+        raise RuntimeError('Please run `settings.load()` before running `settings.validation()`.')
+
+    # check that each key is accessed the same way
+    available_keys = {}
+    for source in [ settings.source ]:
+        src_keys = source.keys()
+        for key in src_keys:
+            cleaned = canonical_key(key)
+            if cleaned not in available_keys:
+                available_keys[cleaned] = {}
+            if key not in available_keys[cleaned]:
+                available_keys[cleaned][key] = set()
+            available_keys[cleaned][key].add(source.id())
+
+    for value in available_keys.values():
+        print(value)
+        if len(value) > 1:
+            keys = '\n'.join(f'  {k}: {v}' for k, v in value.items())
+            error_msg = 'Different keys are being used to access the same setting. '\
+                f'\n{keys}\n'\
+                'Please make sure all keys use the same specification.'
+            raise RuntimeError(error_msg)
+
+    # check if any missing required fields
+    available_fields = []
+    for field in fields:
+        cleaned = canonical_key(field['name'])
+        available_fields.append(cleaned)
+        if field['required'] and cleaned not in available_keys:
+            error_msg = f'Required field `{field["name"]}` not found in available sources.'
+            raise KeyError(error_msg)
+
+    # check for any extra keys
+    for key in available_keys:
+        k = available_keys[key].popitem()[0]
+        if not k.startswith('_') and key not in available_fields:
+            error_msg = f'Key `{k}` is not registered as a field.'
+            raise KeyError(error_msg)
+
+    # interpolate if needed
+    if settings.interpolate:
+        error_msg = 'Setting interpolation is not yet implemented. '\
+            'Interpolation can be a source of security concerns. '\
+            'Implement and use with caution.'
+        raise NotImplementedError(error_msg)

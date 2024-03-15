@@ -257,3 +257,58 @@ class ArgsSource(Source):
 
 class SQLiteSource(Source):
     pass
+
+
+class CombinedSource(Source):
+    def __init__(self, sources):
+        self.sources = sources
+
+    def add_sources(self, sources):
+        for source in sources:
+            self.add_source(source, holdoff=True)
+
+    def add_source(self, source, holdoff=False):
+        self.sources.append(source)
+        if not holdoff:
+            self.load()
+
+    def load(self):
+        for source in self.sources:
+            source.load()
+        self.loaded = True
+
+    def keys(self):
+        keys_set = set()
+        for source in self.sources:
+            keys_set.update(source.keys())
+        return list(keys_set)
+
+    def get(self, key, context=None, default=None):
+        '''
+        We don't want this. We want query(). But we are mid-refactor.
+        '''
+        if context is None:
+            context = {}
+        best_matches = []
+        for source in self.sources:
+            l = source.query(key, context)
+            if not l:
+                continue
+            # sort list based on selector priority to get best match
+            l = sorted(l, key=lambda x: pss.pssselectors.css_selector_key(x[0]))
+            best_local_match = l[0]
+            best_matches.append((source.sourceid, best_local_match))
+            break
+
+        if len(best_matches) == 0:
+            return default
+
+        best_match = best_matches[0][1]
+        # find the matching field so we know how to parse
+        for field in pss.schema.fields:
+            if field["name"] == key:
+                field_type = field['type']
+        return pss.psstypes.parse(best_match[1], field_type)
+
+    def debug_dump(self):
+        return { source.id(): source.debug_dump() for source in self.sources }

@@ -5,7 +5,8 @@ import itertools
 
 import pss.pathfinder
 import pss.pssselectors
-from pss.schema import fields, canonical_key
+import pss.schema
+import pss.sources
 
 from pss.sources import *
 
@@ -35,20 +36,20 @@ class Settings():
         self.description = description
         self.epilog = epilog
         self.exit_on_failure = exit_on_failure
-        self.sources = []
         self.settings = {}
         self.loaded = False
         self.define_ordering = None
         self.interpolate = interpolate
-
-        if not sources:
+        if sources is None:
             sources = self.default_sources()
+        self.source = CombinedSource(sources)
 
-        self.add_sources(sources)
+    def load(self):
+        self.source.load()
+        self.loaded = True
 
-    def add_sources(self, sources):
-        for source in sources:
-            self.add_source(source, holdoff=True)
+    def usage(self):
+        pass
 
     def default_sources(self):
         filename = f"{self.prog}.pss"
@@ -66,121 +67,24 @@ class Settings():
         ] + [ PSSFileSource(settings=self, filename=sd[1], sourceid=sd[0]) for sd in source_files if sd[1] is not None and os.path.exists(sd[1]) ]
         return sources
 
-    def add_source(self, source, holdoff=False):
-        self.sources.append(source)
-        if not holdoff:
-            self.load()
-
-    def load(self):
-        for source in self.sources:
-            source.load()
-        self.loaded = True
-
-    def validate(self):
-        '''Validate all the loaded settings against added fields.
-        This will:
-        - Check we don't have keys with the same name (even with
-          different cases).
-        - Check all registered fields exist
-        - Check no unregistered variables exist, unless prefixed with `_`
-        - Interpolate everything
-        '''
-        if not self.loaded:
-            raise RuntimeError('Please run `settings.load()` before running `settings.validation()`.')
-
-        # check that each key is accessed the same way
-        available_keys = {}
-        for source in self.sources:
-            src_keys = source.keys()
-            for key in src_keys:
-                cleaned = canonical_key(key)
-                if cleaned not in available_keys:
-                    available_keys[cleaned] = {}
-                if key not in available_keys[cleaned]:
-                    available_keys[cleaned][key] = set()
-                available_keys[cleaned][key].add(source.sourceid)
-
-        for value in available_keys.values():
-            print(value)
-            if len(value) > 1:
-                keys = '\n'.join(f'  {k}: {v}' for k, v in value.items())
-                error_msg = 'Different keys are being used to access the same setting. '\
-                    f'\n{keys}\n'\
-                    'Please make sure all keys use the same specification.'
-                raise RuntimeError(error_msg)
-
-        # check if any missing required fields
-        available_fields = []
-        for field in fields:
-            cleaned = canonical_key(field['name'])
-            available_fields.append(cleaned)
-            if field['required'] and cleaned not in available_keys:
-                error_msg = f'Required field `{field["name"]}` not found in available sources.'
-                raise KeyError(error_msg)
-
-        # check for any extra keys
-        for key in available_keys:
-            k = available_keys[key].popitem()[0]
-            if not k.startswith('_') and key not in available_fields:
-                error_msg = f'Key `{k}` is not registered as a field.'
-                raise KeyError(error_msg)
-
-        # interpolate if needed
-        if self.interpolate:
-            error_msg = 'Setting interpolation is not yet implemented. '\
-                'Interpolation can be a source of security concerns. '\
-                'Implement and use with caution.'
-            raise NotImplementedError(error_msg)
-
-    def usage(self):
-        pass
-
     def get(self, key, context=None, default=None):
-        if context is None:
-            context = pss.pssselectors.UniversalSelector()
-        best_matches = []
-        for source in self.sources:
-            l = source.query(key, context)
-            if not l:
-                continue
-            # sort list based on selector priority to get best match
-            l = sorted(l, key=lambda x: pss.pssselectors.css_selector_key(x[0]))
-            best_local_match = l[0]
-            best_matches.append((source.sourceid, best_local_match))
-            if self.define_ordering is None:
-                # If we have no defined order, so we return the best
-                # match from the first available source.
-                break
-
-        if len(best_matches) == 0:
-            return default
-
-        if self.define_ordering is not None:
-            # TODO reorder the best local matches from each source
-            # based the `defined_ordering`.
-            pass
-        best_match = best_matches[0][1]
-        # find the matching field so we know how to parse
-        for field in fields:
-            if field["name"] == key:
-                field_type = field['type']
-        return pss.psstypes.parse(best_match[1], field_type)
+        return self.source.get(key, context, default)
 
     def __getattr__(self, key):
         '''
-        Enum-style access to fields.
+        Enum-style access to pss.schema.fields.
         '''
-        for field in fields:
+        for field in pss.schema.fields:
             if field["name"] == key:
                 return self.get(key)
 
         raise ValueError(f"Invalid Key: {key}")
 
     def __dir__(self):
-        return sorted(set([field["name"] for field in fields]))
+        return sorted(set([field["name"] for field in pss.schema.fields]))
 
     def __hasattr__(self, key):
         return key in dir(self)
 
     def debug_dump(self):
-        return {source.id(): source.debug_dump() for source in self.sources}
+        return self.source.debug_dump()
