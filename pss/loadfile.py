@@ -60,9 +60,9 @@ def load_pss_string(text, provenance, print_debug=False):
 
 
 if __name__ == '__main__':
-    rules = load_pss_file("creds.pss.example")
+    rules = load_pss_file("creds.pss.example", provenance="test-script")
     print(rules)
-    rules2 = load_pss_file(io.StringIO('* {foo:bar;}'))
+    rules2 = load_pss_file(io.StringIO('* {foo:bar;}'), provenance="test-script")
     print(rules2)
-    rules3 = load_pss_string('* {foo:bar;}')
+    rules3 = load_pss_string('* {foo:bar;}', provenance="test-script")
     print(rules2)

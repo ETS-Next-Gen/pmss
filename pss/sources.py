@@ -244,7 +244,7 @@ class ArgsSource(Source):
         selector_dict = self.results.get(key, {})
         return_list = []
         for selector, value in selector_dict.items():
-            if selector.match(**params):
+            if selector.match(**context):
                 return_list.append([selector, value])
         return return_list
 
