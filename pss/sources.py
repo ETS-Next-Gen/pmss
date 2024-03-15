@@ -4,6 +4,7 @@ import os
 import sys
 
 import pss.pssselectors
+import pss.loadfile
 
 SOURCE_IDS = enum.Enum('SOURCE_IDS', ['ENV', 'SourceConfigFile', 'SystemConfigFile', 'UserConfigFile', 'EnvironmentVariables', 'CommandLineArgs'])
 
@@ -64,19 +65,19 @@ class PSSFileSource(Source):
         self.results = {}
 
     def load(self):
-        self.results = pss.loadfile.load_pss_file(self.filename)
+        self.results = pss.loadfile.load_pss_file(self.filename, provenance=self.id())
         self.loaded = True
 
     def query(self, key, context):
         if not self.loaded:
             raise RuntimeError(f'Please `load()` data from source `{self.sourceid} before trying to `query()`.')
         selector_dict = self.results.get(key)
+        # Item not in PSS file
+        if selector_dict is None:
+            return []
         return_list = []
         for selector, value in selector_dict.items():
-            # FIXME this code is broken as the context is not
-            # a mappable object when using the `UniversalSelector`
-            params = {} if isinstance(context, pss.pssselectors.UniversalSelector) else context
-            if selector.match(**params):
+            if selector.match(**context):
                 return_list.append([selector, value])
         return return_list
 
@@ -84,11 +85,13 @@ class PSSFileSource(Source):
         return self.results.keys()
 
     def id(self):
-        if self.source_id:
+        if self.sourceid:
             return self.sourceid
         else:
             return f"{super().id()}:{self.filename}"
 
+    def debug_dump(self):
+        return self.results
 
 class SimpleEnvsSource(Source):
     '''
@@ -134,7 +137,7 @@ class SimpleEnvsSource(Source):
         if not self.loaded:
             raise RuntimeError(f'Please `load()` data from source `{self.sourceid} before trying to `query()`.')
         if key.upper() in self.extracted:
-            return [[pss.pssselectors.UniversalSelector(), key]]
+            return [[pss.pssselectors.UniversalSelector(provenance=self.id()), key]]
 
         return False
 
@@ -205,7 +208,7 @@ class ArgsSource(Source):
             flag_split = garg[0].split('=')
             flag = flag_split[0]
             # TODO check if ':' in flag to parse selector
-            selector = pss.pssselectors.UniversalSelector()
+            selector = pss.pssselectors.UniversalSelector(provenance=self.id())
             name = None
             value = None
             for field in pss.schema.fields:
@@ -241,9 +244,6 @@ class ArgsSource(Source):
         selector_dict = self.results.get(key, {})
         return_list = []
         for selector, value in selector_dict.items():
-            # FIXME this code is broken as the context is not
-            # a mappable object when using the `UniversalSelector`
-            params = {} if isinstance(context, pss.pssselectors.UniversalSelector) else context
             if selector.match(**params):
                 return_list.append([selector, value])
         return return_list

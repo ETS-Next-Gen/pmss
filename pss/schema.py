@@ -3,44 +3,19 @@
 # TODO: Integrate type conversions.
 
 import pss.psstypes
-
-
-def deepupdate(d, u):
-    '''
-    Like dict.update, but handling nested dictionaries.
-
-    Useful for merging several `pss` heirarchies
-    '''
-    for k, v in u.items():
-        if isinstance(v, dict):
-            d[k] = deepupdate(d.get(k, {}), v)
-        else:
-            d[k] = v
-    return d
-
-
-def canonical_key(k):
-    '''
-    We want to avoid collisions. It's easy to confuse
-    `server_port`, `serverPort`, etc. For validation, we convert keys
-    to lower-case, and remove word delimieters. If there is a collision,
-    we flag it.
-
-    The format doesn't strictly disallow this, but we very much think
-    this is a bad idea, so we validate for it not being there. This
-    should probably be a flag.
-    '''
-    return k.lower().replace('-', '').replace('_', '')
-
+import pss.util
 
 fields = []
-
+classes = []
+attributes = []
 
 def register_field(
         name,
         type,
-        command_line_flags = None,  # Extra matching command-line flags (beyond --key)
+        *args,
         description = None,
+        command_line_flags = None,  # Extra matching command-line flags (beyond --key)
+
         required = None,  # Can be a selector or a list of selectors. True is shorthand for '*'
         env = None,  # Environment variables this can be pulled from
         default = None
@@ -64,11 +39,56 @@ def register_field(
     })
 
 
+def register_class(
+        name,
+        *args,
+        command_line_flags = None,
+        description = None
+):
+    '''
+    For example, 'dev' and 'prod'
+
+    This way, we can define rules such as:
+    .dev {}
+    .prod {}
+    '''
+    self.classes.append({
+        "name": name,
+        "command_line_flags": command_line_flags,
+        "description": description
+    })
+
+
+def register_attribute(
+        name,
+        *args,
+        type,
+        description = None
+):
+    '''
+    For example, `'username'` would let us use a selector
+    `[username=bob]`
+    '''
+    self.attributes.append({
+        "name": name,
+        "type": type,
+        "description": description
+    })
+
 register_field(
     name="verbose",
     type=pss.psstypes.TYPES.boolean,
     command_line_flags=["-v", "--verbose"],
     description="Print additional debugging information.",
+    default=False
+)
+
+
+register_field(
+    name="help",
+    type=pss.psstypes.TYPES.boolean,
+    command_line_flags=["-h", "--help"],
+    description="Print help information and exit.",
     default=False
 )
 
@@ -91,7 +111,7 @@ def validate(settings):
     for source in [ settings.source ]:
         src_keys = source.keys()
         for key in src_keys:
-            cleaned = canonical_key(key)
+            cleaned = pss.util.canonical_key(key)
             if cleaned not in available_keys:
                 available_keys[cleaned] = {}
             if key not in available_keys[cleaned]:
@@ -110,7 +130,7 @@ def validate(settings):
     # check if any missing required fields
     available_fields = []
     for field in fields:
-        cleaned = canonical_key(field['name'])
+        cleaned = pss.util.canonical_key(field['name'])
         available_fields.append(cleaned)
         if field['required'] and cleaned not in available_keys:
             error_msg = f'Required field `{field["name"]}` not found in available sources.'

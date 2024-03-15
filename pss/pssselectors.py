@@ -2,11 +2,11 @@ import json
 
 
 class Selector():
-    def __init__(self):
-        self.metadata = None
+    def __init__(self, provenance=None):
+        self.provenance = provenance
 
-    def set_metadata(self, metadata):
-        self.metadata = metadata
+    def set_provenance(self, provenance):
+        self.provenance = provenance
 
     def css_specificity(self):
         '''
@@ -40,10 +40,10 @@ class Selector():
         return CompoundSelector(self_selectors + other_selectors)
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} {self}>"
+        return f"<{self.__class__.__name__} {self} / {self.provenance}>"
 
     def __hash__(self):
-        return hash(json.dumps(self.metadata) + ":" + str(self))
+        return hash(str(self.provenance) + ":" + str(self))
 
     def __ne__(self, other):
         return not self == other
@@ -54,8 +54,8 @@ class Selector():
 
 class ClassSelector(Selector):
     # e.g. `.foo`
-    def __init__(self, class_name):
-        super().__init__()
+    def __init__(self, class_name, provenance=None):
+        super().__init__(provenance=provenance)
         if class_name[0] == ".":
             class_name = class_name[1:]
         self.class_name = class_name
@@ -64,7 +64,7 @@ class ClassSelector(Selector):
         return 10;
 
     def __str__(self):
-        return f".{self.class_name}"
+        return f".{self.class_name} / {self.provenance}"
 
     def __eq__(self, other):
         if not isinstance(other, ClassSelector):
@@ -83,8 +83,8 @@ class ClassSelector(Selector):
 
 class TypeSelector(Selector):
     # e.g. `div`
-    def __init__(self, element_type):
-        super().__init__()
+    def __init__(self, element_type, provenance=None):
+        super().__init__(provenance=provenance)
         self.element_type = element_type
 
     def __str__(self):
@@ -110,8 +110,8 @@ class TypeSelector(Selector):
 
 class IDSelector(Selector):
     # e.g. `#bar`
-    def __init__(self, id_name):
-        super().__init__()
+    def __init__(self, id_name, provenance=None):
+        super().__init__(provenance=provenance)
         if id_name[0] == "#":
             id_name = id_name[1:]
         self.id_name = id_name
@@ -139,8 +139,8 @@ class IDSelector(Selector):
 
 class PseudoClassSelector(Selector):
     # e.g. `:hover`
-    def __init__(self, pseudo_class):
-        super().__init__()
+    def __init__(self, pseudo_class, provenance=None):
+        super().__init__(provenance=provenance)
         self.pseudo_class = pseudo_class
 
     def __str__(self):
@@ -164,8 +164,8 @@ class PseudoClassSelector(Selector):
 
 class PseudoElementSelector(Selector):
     # e.g. `::before`
-    def __init__(self, pseudo_element):
-        super().__init__()
+    def __init__(self, pseudo_element, provenance=None):
+        super().__init__(provenance=provenance)
         self.pseudo_element = pseudo_element
 
     def __str__(self):
@@ -193,8 +193,8 @@ class AttributeSelector(Selector):
     # https://developer.mozilla.org/en-US/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors
     #
     # Note that we treat [biff] (an attribute exists) as operator and value simply being None
-    def __init__(self, attribute, operator, value):
-        super().__init__()
+    def __init__(self, attribute, operator, value, provenance=None):
+        super().__init__(provenance=provenance)
         self.attribute = attribute
         self.operator = operator
         self.value = value
@@ -230,8 +230,8 @@ class AttributeSelector(Selector):
 
 class CompoundSelector(Selector):
     # e.g. '.foo.bar [baz=biff] [bam] blah
-    def __init__(self, selectors):
-        super().__init__()
+    def __init__(self, selectors, provenance=None):
+        super().__init__(provenance=provenance)
         self.selectors = selectors
 
     def __str__(self):
@@ -256,7 +256,7 @@ class CompoundSelector(Selector):
 
 
 class NullSelector(CompoundSelector):
-    def __init__(self):
+    def __init__(self, provenance=None):
         super().__init__([])
 
     def __str__(self):
@@ -276,8 +276,8 @@ class NullSelector(CompoundSelector):
 
 
 class UniversalSelector(Selector):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, provenance=None):
+        super().__init__(provenance=provenance)
 
     def css_specificity(self):
         return 0;
