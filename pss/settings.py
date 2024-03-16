@@ -6,9 +6,9 @@ import itertools
 import pss.pathfinder
 import pss.pssselectors
 import pss.schema
-import pss.sources
+import pss.rulesets
 
-from pss.sources import *
+from pss.rulesets import *
 
 
 def verbose():
@@ -33,15 +33,15 @@ class Settings():
     '''
     def __init__(
             self,
-            sources=None
+            rulesets=None
     ):
-        if sources is None:
-            sources = pss.functional.default_sources(self)
-        self.source = CombinedSource(sources)
-        self.source.load()
+        if rulesets is None:
+            rulesets = pss.functional.default_rulesets(self)
+        self.ruleset = CombinedRuleset(rulesets)
+        self.ruleset.load()
 
     def get(self, key, *args, id=None, types=[], classes=[], attributes={}, default=None):
-        results = self.source.query(key, {
+        results = self.ruleset.query(key, {
             "id": id,
             "types": types,
             "classes": classes,
@@ -70,4 +70,4 @@ class Settings():
         return key in dir(self)
 
     def debug_dump(self):
-        return self.source.debug_dump()
+        return self.ruleset.debug_dump()

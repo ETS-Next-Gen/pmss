@@ -1,5 +1,5 @@
 # TODO: Break this into multiple files, with appropriate names.
-# move to `sources.py` and `settings.py`
+# move to `rulesets.py` and `settings.py`
 # TODO: Integrate type conversions.
 
 import pss.psstypes
@@ -122,15 +122,15 @@ def validate(settings):
     '''
     # check that each key is accessed the same way
     available_keys = {}
-    for source in [ settings.source ]:
-        src_keys = source.keys()
+    for ruleset in [ settings.ruleset ]:
+        src_keys = ruleset.keys()
         for key in src_keys:
             cleaned = pss.util.canonical_key(key)
             if cleaned not in available_keys:
                 available_keys[cleaned] = {}
             if key not in available_keys[cleaned]:
                 available_keys[cleaned][key] = set()
-            available_keys[cleaned][key].add(source.id())
+            available_keys[cleaned][key].add(ruleset.id())
 
     for value in available_keys.values():
         print(value)
@@ -147,7 +147,7 @@ def validate(settings):
         cleaned = pss.util.canonical_key(field['name'])
         available_fields.append(cleaned)
         if field['required'] and cleaned not in available_keys:
-            error_msg = f'Required field `{field["name"]}` not found in available sources.'
+            error_msg = f'Required field `{field["name"]}` not found in available rulesets.'
             raise KeyError(error_msg)
 
     # check for any extra keys

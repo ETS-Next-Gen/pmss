@@ -6,14 +6,14 @@ import sys
 import pss.pssselectors
 import pss.loadfile
 
-SOURCE_IDS = enum.Enum('SOURCE_IDS', ['ENV', 'SourceConfigFile', 'SystemConfigFile', 'UserConfigFile', 'EnvironmentVariables', 'CommandLineArgs'])
+RULESET_IDS = enum.Enum('RULESET_IDS', ['ENV', 'SourceConfigFile', 'SystemConfigFile', 'UserConfigFile', 'EnvironmentVariables', 'CommandLineArgs'])
 
 
 def _convert_keys_to_str(d):
     '''
-    {'ArgsSource': {'hostname': {<UniversalSelector *>: 'bar'}}, 'SimpleEnvsSource': {}}
+    {'ArgsRuleset': {'hostname': {<UniversalSelector *>: 'bar'}}, 'SimpleEnvsRuleset': {}}
     to
-    {'ArgsSource': {'hostname': {'*': 'bar'}}, 'SimpleEnvsSource': {}}
+    {'ArgsRuleset': {'hostname': {'*': 'bar'}}, 'SimpleEnvsRuleset': {}}
 }
 
     '''
@@ -25,14 +25,14 @@ def _convert_keys_to_str(d):
         return d
 
 
-class Source():
-    def __init__(self, schema, sourceid):
+class Ruleset():
+    def __init__(self, schema, rulesetid):
         self.loaded = False
         self.schema = schema
-        self.sourceid = sourceid
+        self.rulesetid = rulesetid
 
     def load(self):
-        '''Load settings into your source component.
+        '''Load settings into your ruleset component.
         Upon successful load, set `self.loaded = True`.
         '''
         raise NotImplementedError('This should always be called on a subclass')
@@ -47,7 +47,7 @@ class Source():
 
     def keys(self):
         '''This method should return a list of all
-        available keys in the source.
+        available keys in the ruleset.
         '''
         raise NotImplementedError('This should always be called on a subclass')
 
@@ -58,9 +58,9 @@ class Source():
         return "[borked]"
 
 
-class PSSFileSource(Source):
-    def __init__(self, schema, filename, sourceid=None):
-        super().__init__(schema=schema, sourceid=sourceid)
+class PSSFileRuleset(Ruleset):
+    def __init__(self, schema, filename, rulesetid=None):
+        super().__init__(schema=schema, rulesetid=rulesetid)
         self.filename = filename
         self.results = {}
 
@@ -70,7 +70,7 @@ class PSSFileSource(Source):
 
     def query(self, key, context):
         if not self.loaded:
-            raise RuntimeError(f'Please `load()` data from source `{self.sourceid} before trying to `query()`.')
+            raise RuntimeError(f'Please `load()` data from ruleset `{self.rulesetid} before trying to `query()`.')
         selector_dict = self.results.get(key)
         # Item not in PSS file
         if selector_dict is None:
@@ -85,22 +85,22 @@ class PSSFileSource(Source):
         return self.results.keys()
 
     def id(self):
-        if self.sourceid:
-            return self.sourceid
+        if self.rulesetid:
+            return self.rulesetid
         else:
             return f"{super().id()}:{self.filename}"
 
     def debug_dump(self):
         return self.results
 
-class SimpleEnvsSource(Source):
+class SimpleEnvsRuleset(Ruleset):
     '''
     Note that, for now, we do not permit selectors in environment
     variables (for now), since per IEEE Std 1003.1-2001, environment
     variables consist solely of uppercase letters, digits, and the '_'
     (underscore) and do not begin with a digit.
 
-    In the future, we could make a ComplexEnvsSource where the
+    In the future, we could make a ComplexEnvsRuleset where the
     selector is included in the value or encoded in some way. The
     future is not today.
 
@@ -111,11 +111,11 @@ class SimpleEnvsSource(Source):
     def __init__(
             self,
             schema,
-            sourceid=SOURCE_IDS.EnvironmentVariables,
+            rulesetid=RULESET_IDS.EnvironmentVariables,
             env=os.environ,
             default_keys=True  # Do we assume all environment variables may be keys?
     ):
-        super().__init__(schema=schema, sourceid=sourceid)
+        super().__init__(schema=schema, rulesetid=rulesetid)
         self.extracted = {}
         self.default_keys=default_keys
         self.env = env
@@ -135,7 +135,7 @@ class SimpleEnvsSource(Source):
 
     def query(self, key, context):
         if not self.loaded:
-            raise RuntimeError(f'Please `load()` data from source `{self.sourceid} before trying to `query()`.')
+            raise RuntimeError(f'Please `load()` data from ruleset `{self.rulesetid} before trying to `query()`.')
         if key.upper() in self.extracted:
             return [[pss.pssselectors.UniversalSelector(provenance=self.id()), key]]
 
@@ -145,7 +145,7 @@ class SimpleEnvsSource(Source):
         return self.extracted.keys()
 
     def id(self):
-        return "SimpleEnvsSource"
+        return "SimpleEnvsRuleset"
 
     def debug_dump(self):
         return _convert_keys_to_str(self.extracted)
@@ -174,12 +174,12 @@ def _group_arguments(args):
 
 # We roughly follow:
 #   https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser
-class ArgsSource(Source):
+class ArgsRuleset(Ruleset):
     # --foo=bar
     # --selector:foo=bar
     # --dev (enable class dev, if registered as one of the classes which can be enabled / disabled via commandline)
-    def __init__(self, schema, sourceid=SOURCE_IDS.CommandLineArgs, argv=sys.argv):
-        super().__init__(schema=schema, sourceid=sourceid)
+    def __init__(self, schema, rulesetid=RULESET_IDS.CommandLineArgs, argv=sys.argv):
+        super().__init__(schema=schema, rulesetid=rulesetid)
         self.argv = argv
         self.results = {}
 
@@ -236,11 +236,11 @@ class ArgsSource(Source):
         self.loaded = True
 
     def query(self, key, context):
-        '''The internal `results` have the same structure as PSSSource,
+        '''The internal `results` have the same structure as PSSRuleset,
         so the `self.query` is identical.
         '''
         if not self.loaded:
-            raise RuntimeError(f'Please `load()` data from source `{self.sourceid} before trying to `query()`.')
+            raise RuntimeError(f'Please `load()` data from ruleset `{self.rulesetid} before trying to `query()`.')
         selector_dict = self.results.get(key, {})
         return_list = []
         for selector, value in selector_dict.items():
@@ -255,32 +255,32 @@ class ArgsSource(Source):
         return _convert_keys_to_str(self.results)
 
 
-class SQLiteSource(Source):
+class SQLiteRuleset(Ruleset):
     pass
 
 
-class CombinedSource(Source):
-    def __init__(self, sources):
-        self.sources = sources
+class CombinedRuleset(Ruleset):
+    def __init__(self, rulesets):
+        self.rulesets = rulesets
 
-    def add_sources(self, sources):
-        for source in sources:
-            self.add_source(source, holdoff=True)
+    def add_rulesets(self, rulesets):
+        for ruleset in rulesets:
+            self.add_ruleset(ruleset, holdoff=True)
 
-    def add_source(self, source, holdoff=False):
-        self.sources.append(source)
+    def add_ruleset(self, ruleset, holdoff=False):
+        self.rulesets.append(ruleset)
         if not holdoff:
             self.load()
 
     def load(self):
-        for source in self.sources:
-            source.load()
+        for ruleset in self.rulesets:
+            ruleset.load()
         self.loaded = True
 
     def keys(self):
         keys_set = set()
-        for source in self.sources:
-            keys_set.update(source.keys())
+        for ruleset in self.rulesets:
+            keys_set.update(ruleset.keys())
         return list(keys_set)
 
     def query(self, key, context=None):
@@ -290,14 +290,14 @@ class CombinedSource(Source):
         if context is None:
             context = {}
         best_matches = []
-        for source in self.sources:
-            l = source.query(key, context)
+        for ruleset in self.rulesets:
+            l = ruleset.query(key, context)
             if not l:
                 continue
             # sort list based on selector priority to get best match
             l = sorted(l, key=lambda x: pss.pssselectors.css_selector_key(x[0]))
             best_local_match = l[0]
-            best_matches.append((source.sourceid, best_local_match))
+            best_matches.append((ruleset.rulesetid, best_local_match))
             break
 
         if len(best_matches) == 0:
@@ -311,4 +311,4 @@ class CombinedSource(Source):
         return pss.psstypes.parse(best_match[1], field_type)
 
     def debug_dump(self):
-        return { source.id(): source.debug_dump() for source in self.sources }
+        return { ruleset.id(): ruleset.debug_dump() for ruleset in self.rulesets }
