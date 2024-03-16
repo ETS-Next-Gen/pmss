@@ -40,6 +40,100 @@ What else is needed?
 * Some support for configuring plug-ins / modules
   * This probably means some level of successive loading.
 
+
+What's the model
+----------------
+
+We're basing this on CSS. Why?
+
+- They cascade
+- They're well-specified and libraries exist
+- Many people know CSS
+
+The downside, of course, is that many people find CSS a bit complex.
+
+Conceptually, we plan to have series of rule sets. E.g.:
+
+```python
+    add_ruleset(args=sys.argsv)
+    add_ruleset(file="~/.settings.pss", name="User settings file", classes=["settings_file"], interpolation=True)
+    add_ruleset(environ=sys.environ, id="environ")
+    delete_ruleset(id="environ")
+```
+
+We also plan to have series of schemas, registered in code. Modules
+can define schemas too. For example, a cloud service module could
+define that it wants API keys.
+
+Once everything is loaded, we can run:
+
+```python
+    validate()
+```
+
+Note that settings are usable (just not guaranteed correct) before
+validation, as e.g. command line arguments might point to a settings
+file and a series of modules to load, and validation might be
+impossible until those are loaded.
+
+We're trying to make this batteries included, so by default, the
+rulesets look in the standard locations (`~`, `/etc`, etc.) and on the
+commandline.
+
+We do not look at parent / child relationships, so the following are
+both okay:
+
+```css
+    auth {
+        google {...}
+        microsoft {...}
+        github {...}
+    }
+    rosters {...}
+```
+or:
+```css
+   google {
+       auth {...}
+       rosters {...}
+       docs {...}
+   }
+
+   microsoft {...}
+```
+
+For debugging, we can have fine-grained settings
+
+```python
+if settings.verbose(types=['pss', 'selectors']):
+   print("....")
+```
+
+And we can decide what to make verbose from the command line whether to run `--verbose=True` or `--pss:verbose=True` or otherwise.
+
+Likewise, we can define classes for e.g. prod and dev:
+
+```css
+.prod {
+    database: postgresql;
+}
+
+.dev {
+    database: sqlite;
+}
+```
+
+Files
+-----
+
+* psslex.py and pssyacc.py are the lexer and parser for our variant of
+  CSS. These are designed to be interchangeable if you'd like e.g.
+  full CSS or an INI file or whatnot.
+* psstypes.py handles type validation and conversion. We use other
+  libraries where possible, to maintain compatible formats. Conversely,
+  this is usable without the rest of the system.
+
+
 Who else has thought about this?
 --------------------------------
 
@@ -68,47 +162,4 @@ Who else has thought about this?
   * [hcl](https://github.com/hashicorp/hcl) Seems nice.
   * [JSonnet](https://jsonnet.org/) has nice ideas, but seems to confuse templates and inheritence. Cue, above, is a reaction to this confusion.
 
-
-
-What's the model
-----------------
-
-We're basing this on CSS. Why?
-
-- They cascade
-- They're well-specified and libraries exist
-- Many people know CSS
-
-The downside, of course, is that many people find CSS a bit complex.
-
-We plan to have series of rule sets. E.g.:
-
-    add_ruleset(args=sys.argsv)
-    add_ruleset(file="~/.settings.pss", name="User settings file", classes=["settings_file"], interpolation=True)
-    add_ruleset(environ=sys.environ, id="environ")
-    delete_ruleset(id="environ")
-
-We also plan to have series of schemas, registered in code. Modules
-can define schemas too. For example, a cloud service module could
-define that it wants API keys.
-
-Once everything is loaded, we can run:
-
-  validate()
-
-Note that settings are usable (just not guaranteed correct) before
-validation, as e.g. command line arguments might point to a settings
-file and a series of modules to load, and validation might be
-impossible until those are loaded.
-
-
-Files
------
-
-* psslex.py and pssyacc.py are the lexer and parser for our variant of
-  CSS. These are designed to be interchangeable if you'd like e.g.
-  full CSS or an INI file or whatnot.
-* psstypes.py handles type validation and conversion. We use other
-  libraries where possible, to maintain compatible formats. Conversely,
-  this is usable without the rest of the system.
 
