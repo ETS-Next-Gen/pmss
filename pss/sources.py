@@ -26,9 +26,9 @@ def _convert_keys_to_str(d):
 
 
 class Source():
-    def __init__(self, settings, sourceid):
+    def __init__(self, schema, sourceid):
         self.loaded = False
-        self.settings = settings
+        self.schema = schema
         self.sourceid = sourceid
 
     def load(self):
@@ -59,8 +59,8 @@ class Source():
 
 
 class PSSFileSource(Source):
-    def __init__(self, settings, filename, sourceid=None):
-        super().__init__(settings=settings, sourceid=sourceid)
+    def __init__(self, schema, filename, sourceid=None):
+        super().__init__(schema=schema, sourceid=sourceid)
         self.filename = filename
         self.results = {}
 
@@ -110,19 +110,19 @@ class SimpleEnvsSource(Source):
     '''
     def __init__(
             self,
-            settings,
+            schema,
             sourceid=SOURCE_IDS.EnvironmentVariables,
             env=os.environ,
             default_keys=True  # Do we assume all environment variables may be keys?
     ):
-        super().__init__(settings=settings, sourceid=sourceid)
+        super().__init__(schema=schema, sourceid=sourceid)
         self.extracted = {}
         self.default_keys=default_keys
         self.env = env
 
     def load(self):
         if self.default_keys:
-            possible_keys = [k.upper() for k in dir(self.settings)]
+            possible_keys = [k.upper() for k in dir(self.schema)]
 
             for key in self.env:
                 if key in possible_keys:
@@ -178,8 +178,8 @@ class ArgsSource(Source):
     # --foo=bar
     # --selector:foo=bar
     # --dev (enable class dev, if registered as one of the classes which can be enabled / disabled via commandline)
-    def __init__(self, settings, sourceid=SOURCE_IDS.CommandLineArgs, argv=sys.argv):
-        super().__init__(settings=settings, sourceid=sourceid)
+    def __init__(self, schema, sourceid=SOURCE_IDS.CommandLineArgs, argv=sys.argv):
+        super().__init__(schema=schema, sourceid=sourceid)
         self.argv = argv
         self.results = {}
 
@@ -283,7 +283,7 @@ class CombinedSource(Source):
             keys_set.update(source.keys())
         return list(keys_set)
 
-    def get(self, key, context=None, default=None):
+    def query(self, key, context=None):
         '''
         We don't want this. We want query(). But we are mid-refactor.
         '''
@@ -301,7 +301,7 @@ class CombinedSource(Source):
             break
 
         if len(best_matches) == 0:
-            return default
+            return None
 
         best_match = best_matches[0][1]
         # find the matching field so we know how to parse

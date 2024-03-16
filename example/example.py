@@ -1,7 +1,6 @@
 import pss
 
-
-settings = pss.Settings(
+settings = pss.init(
     prog="lo",
     description="A system for monitoring",
     epilog="For more information, see PSS documentation."
@@ -22,13 +21,12 @@ pss.register_field(
     required=True
 )
 
-settings.load()
 pss.validate(settings)
 
-print('# settings.server_port')
-print(settings.server_port)
+print('# settings.server_port()')
+print(settings.server_port())
 print("# settings.get('server_port')")
 print(settings.get('server_port'))
-print("# settings.get('server_port', {'attributes': {'school': 'middlesex'}})")
-print(settings.get('server_port', {'attributes': {'school': 'middlesex'}}))
+print("# settings.get('server_port', attributes={'school': 'middlesex'}))")
+print(settings.get('server_port', attributes={'school': 'middlesex'}))
 print(settings.debug_dump())

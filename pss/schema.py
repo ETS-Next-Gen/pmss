@@ -103,9 +103,6 @@ def validate(settings):
     - Check no unregistered variables exist, unless prefixed with `_`
     - Interpolate everything
     '''
-    if not settings.loaded:
-        raise RuntimeError('Please run `settings.load()` before running `settings.validation()`.')
-
     # check that each key is accessed the same way
     available_keys = {}
     for source in [ settings.source ]:
@@ -142,10 +139,3 @@ def validate(settings):
         if not k.startswith('_') and key not in available_fields:
             error_msg = f'Key `{k}` is not registered as a field.'
             raise KeyError(error_msg)
-
-    # interpolate if needed
-    if settings.interpolate:
-        error_msg = 'Setting interpolation is not yet implemented. '\
-            'Interpolation can be a source of security concerns. '\
-            'Implement and use with caution.'
-        raise NotImplementedError(error_msg)
