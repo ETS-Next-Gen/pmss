@@ -69,16 +69,26 @@ class Ruleset():
 
 
 class PSSFileRuleset(Ruleset):
-    def __init__(self, schema, filename, rulesetid=None):
+    def __init__(self, schema, filename, rulesetid=None, watch=False):
         super().__init__(schema=schema, rulesetid=rulesetid)
         self.filename = filename
+        self.timestamp = None
         self.results = {}
+        self.watch = watch
 
     def load(self):
+        self.timestamp = os.stat(self.filename).st_mtime
         self.results = pss.loadfile.load_pss_file(self.filename, provenance=self.id())
         self.loaded = True
 
+    def check_changes(self):
+        if not self.watch:
+            return
+        if self.timestamp != os.stat(self.filename).st_mtime:
+            self.load()
+
     def query(self, key, context):
+        self.check_changes()
         if not self.loaded:
             raise RuntimeError(f'Please `load()` data from ruleset `{self.rulesetid} before trying to `query()`.')
         selector_dict = self.results.get(key)
@@ -92,6 +102,7 @@ class PSSFileRuleset(Ruleset):
         return return_list
 
     def keys(self):
+        self.check_changes()
         return self.results.keys()
 
     def id(self):

@@ -100,5 +100,5 @@ def usage(schema=pss.schema.default_schema):
 def register_ruleset(ruleset):
     return settings.ruleset.add_ruleset(ruleset)
 
-def unregister_ruleset(ruleset_id):
+def delete_ruleset(ruleset_id):
     return settings.ruleset.delete_ruleset(ruleset_id)
