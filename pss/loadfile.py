@@ -27,10 +27,11 @@ def flatten_and_print_parse(parse_results):
 
 def rule_sheet(parse_results, provenance):
     '''
-    We convert a list with a selector / key / value hierarchy as returned by the parser
-    into a dictionary of `{ key : { selector: value, selector: value }}`
+    We convert a list with a selector / key / value hierarchy as
+    returned by the parser into a dictionary of
+    `{ key : { selector: value, selector: value }}`
     '''
-    d = collections.defaultdict(lambda:dict())
+    d = collections.defaultdict(lambda: dict())
     for selector, key, value in flatten_rules(parse_results):
         selector.set_provenance(provenance)
 
@@ -45,8 +46,11 @@ def load_pss_file(file, provenance, print_debug=False):
     elif isinstance(file, io.TextIOBase):  # file-like object
         text = file.read()
     else:
-        raise ValueError(f"Incorrect type. Expected filename or file-like object: {file}")
+        raise ValueError(
+            f"Incorrect type. Expected filename or file-like object: {file}"
+        )
     return load_pss_string(text, provenance=provenance, print_debug=print_debug)
+
 
 def load_pss_string(text, provenance, print_debug=False):
     no_comments = pss.psslex.strip_comments(text)
@@ -56,7 +60,6 @@ def load_pss_string(text, provenance, print_debug=False):
         flatten_and_print_parse(result)
     rules = rule_sheet(result, provenance)
     return rules
-
 
 
 if __name__ == '__main__':

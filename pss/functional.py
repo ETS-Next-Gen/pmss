@@ -8,11 +8,14 @@ import pss.pretty_usage
 
 from pss.util import command_line_args
 
+
 def verbose():
     return "-v" in sys.argv
 
+
 def help():
     return "-h" in sys.argv
+
 
 _prog = sys.argv[0]
 _system_name = None
@@ -38,7 +41,8 @@ def init(
     exit_on_failure=_exit_on_failure,
     interpolate=_interpolate
 ):
-    global _prog, _system_name, _usage, _description, _epilog, _rulesets, _exit_on_failure, _interpolate, settings
+    global _prog, _system_name, _usage, _description, _epilog
+    global _rulesets, _exit_on_failure, _interpolate, settings
     _prog = prog
     _system_name = system_name
     _usage = usage
@@ -48,8 +52,8 @@ def init(
 
     if(interpolate):
         raise NotImplementedError(
-            'Setting interpolation is not yet implemented. '\
-            'Interpolation can be a source of security concerns. '\
+            'Setting interpolation is not yet implemented. \n'
+            'Interpolation can be a source of security concerns. \n'
             'Implement and use with caution.'
         )
 
@@ -99,6 +103,7 @@ def usage(schema=pss.schema.default_schema):
 
 def register_ruleset(ruleset):
     return settings.ruleset.add_ruleset(ruleset)
+
 
 def delete_ruleset(ruleset_id):
     return settings.ruleset.delete_ruleset(ruleset_id)

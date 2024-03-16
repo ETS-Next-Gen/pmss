@@ -6,7 +6,7 @@ from collections import defaultdict
 import pss.psstypes
 import pss.util
 
-## These are deprecated. We are moving to having these in schema / default_schema.
+# These are deprecated. We are moving to having these in schema / default_schema.
 fields = []
 classes = []
 attributes = []
@@ -34,13 +34,13 @@ def register_field(
         name,
         type,
         *args,
-        description = None,
-        command_line_flags = None,  # Extra matching command-line flags (beyond --key)
-        required = None,            # Can be a selector or a list of selectors. True is shorthand for '*'
-        env = None,                 # Environment variables this can be pulled from
-        default = None,
-        context = None,
-        schema = default_schema
+        description=None,
+        command_line_flags=None,  # Extra matching command-line flags (beyond --key)
+        required=None,            # Can be a selector or a list of selectors. True is shorthand for '*'
+        env=None,                 # Environment variables this can be pulled from
+        default=None,
+        context=None,
+        schema=default_schema
 ):
     '''We register fields so we can show usage information, as well
     as validate the schema of the loaded file.
@@ -80,9 +80,9 @@ def register_field(
 def register_class(
         name,
         *args,
-        command_line_flags = None,
-        description = None,
-        schema = default_schema
+        command_line_flags=None,
+        description=None,
+        schema=default_schema
 ):
     '''
     For example, 'dev' and 'prod'
@@ -102,8 +102,8 @@ def register_attribute(
         name,
         *args,
         type,
-        description = None,
-        schema = default_schema
+        description=None,
+        schema=default_schema
 ):
     '''
     For example, `'username'` would let us use a selector
@@ -114,6 +114,7 @@ def register_attribute(
         "type": type,
         "description": description
     })
+
 
 register_field(
     name="verbose",
@@ -185,7 +186,7 @@ def validate(settings):
     '''
     # check that each key is accessed the same way
     available_keys = {}
-    for ruleset in [ settings.ruleset ]:
+    for ruleset in [settings.ruleset]:
         src_keys = ruleset.keys()
         for key in src_keys:
             cleaned = pss.util.canonical_key(key)
@@ -221,15 +222,15 @@ def validate(settings):
             raise KeyError(error_msg)
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     try:
-        validate_collisions([{"name":"API_KEY"},{"name":"apikey"}])
+        validate_collisions([{"name": "API_KEY"}, {"name": "apikey"}])
         print("FAILED TO DETECT COLLISION")
     except ValidationError as error:
         print("Correctly caught collision. ", error)
 
     try:
-        validate_collisions([{"name":"API_KEY"},{"name":"API_URL"}])
+        validate_collisions([{"name": "API_KEY"}, {"name": "API_URL"}])
         print("No duplicate keys detected.")
     except ValidationError as error:
         print("INCORRECTLY CAUGHT COLLISION:", error)

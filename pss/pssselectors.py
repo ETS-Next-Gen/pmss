@@ -30,12 +30,12 @@ class Selector():
         if isinstance(self, CompoundSelector):
             self_selectors = self.selectors
         else:
-            self_selectors = [ self ]
+            self_selectors = [self]
 
         if isinstance(other, CompoundSelector):
             other_selectors = other.selectors
         else:
-            other_selectors = [ other ]
+            other_selectors = [other]
 
         return CompoundSelector(self_selectors + other_selectors)
 
@@ -61,7 +61,7 @@ class ClassSelector(Selector):
         self.class_name = class_name
 
     def css_specificity(self):
-        return 10;
+        return 10
 
     def __str__(self):
         return f".{self.class_name} / {self.provenance}"
@@ -100,7 +100,7 @@ class TypeSelector(Selector):
         return super().__hash__()
 
     def css_specificity(self):
-        return 1;
+        return 1
 
     def match(self, id=None, types=[], classes=[], attributes={}):
         if self.element_type in types:
@@ -129,7 +129,7 @@ class IDSelector(Selector):
         return super().__hash__()
 
     def css_specificity(self):
-        return 100;
+        return 100
 
     def match(self, id=None, types=[], classes=[], attributes={}):
         if self.id_name == id:
@@ -156,7 +156,7 @@ class PseudoClassSelector(Selector):
         return super().__hash__()
 
     def css_specificity(self):
-        return 10;
+        return 10
 
     def match(self, id=None, types=[], classes=[], attributes={}):
         return False  # TODO: Implement
@@ -181,7 +181,7 @@ class PseudoElementSelector(Selector):
         return super().__hash__()
 
     def css_specificity(self):
-        return 10;
+        return 10
 
     def match(self, id=None, types=[], classes=[], attributes={}):
         return False  # TODO: Implement
@@ -214,7 +214,7 @@ class AttributeSelector(Selector):
         return super().__hash__()
 
     def css_specificity(self):
-        return 10;
+        return 10
 
     def match(self, id=None, types=[], classes=[], attributes={}):
         if self.attribute not in attributes:
@@ -269,7 +269,7 @@ class NullSelector(CompoundSelector):
         return super().__hash__()
 
     def css_specificity(self):
-        return 0;
+        return 0
 
     def match(self, *args, **kwargs):
         return True
@@ -280,7 +280,7 @@ class UniversalSelector(Selector):
         super().__init__(provenance=provenance)
 
     def css_specificity(self):
-        return 0;
+        return 0
 
     def __str__(self):
         return "*"
@@ -376,7 +376,7 @@ def test_selector_classes():
     assert not id_selector.match(id=f"{ID}_incorrect")
     assert not class_selector.match(classes=[f"{CLASS_NAME}_incorrect"])
     assert not type_selector.match(types=[f"{ELEMENT_TYPE}_incorrect"])
-    assert not attribute_selector.match(attributes={ATTRIBUTE_KEY:ATTRIBUTE_VALUE})
+    assert not attribute_selector.match(attributes={ATTRIBUTE_KEY: ATTRIBUTE_VALUE})
 
     # Testing match function with empty arguments
     assert not id_selector.match()
@@ -390,13 +390,13 @@ def test_selector_classes():
         id=ID,
         types=[ELEMENT_TYPE],
         classes=[CLASS_NAME],
-        attributes={ATTRIBUTE_KEY:ELEMENT_TYPE}
+        attributes={ATTRIBUTE_KEY: ELEMENT_TYPE}
     )
     assert not compound_selector.match(
         id=ID,
         types=[ELEMENT_TYPE],
         classes=[CLASS_NAME + "_incorrect"],
-        attributes={ATTRIBUTE_KEY:ELEMENT_TYPE}
+        attributes={ATTRIBUTE_KEY: ELEMENT_TYPE}
     )
 
 if __name__ == "__main__":

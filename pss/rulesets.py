@@ -114,6 +114,7 @@ class PSSFileRuleset(Ruleset):
     def debug_dump(self):
         return self.results
 
+
 class SimpleEnvsRuleset(Ruleset):
     '''
     Note that, for now, we do not permit selectors in environment
@@ -138,7 +139,7 @@ class SimpleEnvsRuleset(Ruleset):
     ):
         super().__init__(schema=schema, rulesetid=rulesetid)
         self.extracted = {}
-        self.default_keys=default_keys
+        self.default_keys = default_keys
         self.env = env
 
     def load(self):
@@ -182,6 +183,7 @@ def _group_arguments(args):
     '''
     def make_make_key():
         key_index = 1
+
         def make_key(arg):
             nonlocal key_index
             if arg.startswith('-'):
@@ -189,7 +191,7 @@ def _group_arguments(args):
             return key_index
         return make_key
 
-    # We probably just want to return the groupby, but this is for backwards-compatibility. 
+    # We probably just want to return the groupby, but this is for backwards-compatibility.
     return itertools.groupby(args, make_make_key())
 
 
@@ -224,7 +226,7 @@ class ArgsRuleset(Ruleset):
 
         # parse grouped args into results
         for k, garg in grouped_args:
-            garg=list(garg)
+            garg = list(garg)
             print(k, garg)
             flag_split = garg[0].split('=')
             flag = flag_split[0]
@@ -280,8 +282,8 @@ class SQLiteRuleset(Ruleset):
     pass
 
 
+id_counter = 0
 
-id_counter=0
 
 class CombinedRuleset(Ruleset):
     def __init__(self, rulesets, id=None):
@@ -332,12 +334,12 @@ class CombinedRuleset(Ruleset):
             context = {}
         best_matches = []
         for ruleset in self.rulesets:
-            l = ruleset.query(key, context)
-            if not l:
+            subquery = ruleset.query(key, context)
+            if not subquery:
                 continue
             # sort list based on selector priority to get best match
-            l = sorted(l, key=lambda x: pss.pssselectors.css_selector_key(x[0]))
-            best_local_match = l[0]
+            subquery = sorted(subquery, key=lambda x: pss.pssselectors.css_selector_key(x[0]))
+            best_local_match = subquery[0]
             best_matches.append((ruleset.rulesetid, best_local_match))
             break
 
@@ -352,4 +354,4 @@ class CombinedRuleset(Ruleset):
         return pss.psstypes.parse(best_match[1], field_type)
 
     def debug_dump(self):
-        return { ruleset.id(): ruleset.debug_dump() for ruleset in self.rulesets }
+        return {ruleset.id(): ruleset.debug_dump() for ruleset in self.rulesets}

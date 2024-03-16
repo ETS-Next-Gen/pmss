@@ -1,6 +1,7 @@
 import os
 import textwrap
 
+
 def pretty_usage(prog, description, parameters, epilog):
     """Formats and prints a usage message for a command-line script.
 
@@ -33,7 +34,7 @@ def pretty_usage(prog, description, parameters, epilog):
     print('-' * len(prog))
     print(textwrap.fill(description, width=columns-4))
     print()
-    
+
     # Parameters
     param_width = min(20, (columns - 4) // 2)
     desc_width = columns - 4 - param_width
@@ -44,11 +45,12 @@ def pretty_usage(prog, description, parameters, epilog):
         param_rows = [param] + [''] * (len(desc_rows) - 1)
         for param_row, desc_row in zip(param_rows, desc_rows):
             print(param_row.rjust(param_width), desc_row)
-    
+
     # Epilog
     wrapped_epilog = textwrap.fill(epilog, width=columns-4)
     print()
     print(wrapped_epilog)
+
 
 if __name__ == "__main__":
     # Sample data for testing

@@ -45,6 +45,7 @@ def source_config_file(name):
 
     return os.path.join(base, name)
 
+
 def package_config_file(package, name):
     if isinstance(package, types.ModuleType):
         package = package.__name__

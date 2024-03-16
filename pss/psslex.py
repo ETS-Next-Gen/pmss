@@ -22,10 +22,12 @@ states = (
     ('value', 'exclusive'),
 )
 
+
 def t_WHITESPACE(t):
     r"[\t\r\n\f ]+"
     # No return, since we're skipping whitespace.
     # Note this will not match within values
+
 
 t_IDENT = r"[a-zA-Z0-9_]+"
 t_COMPARISON = r'(=|~=|\|=|^=|\$=|\*=)'
@@ -43,21 +45,26 @@ def t_COLON(t):
     t.lexer.begin('value')
     return t
 
+
 def t_value_SEMICOLON(t):
     r";"
     t.lexer.begin('INITIAL')
     return t
 
+
 t_value_VALUE = r"[^;]+"
+
 
 def t_LBRACE(t):
     r"\{"
     return t
 
+
 def t_RBRACE(t):
     r"\}"
     t.lexer.begin('INITIAL')
     return t
+
 
 r_BLOCKCOMMENT = r'\/\*[^*]*\*+([^/*][^*]*\*+)*\/'
 r_LINECOMMENT = r'\/\/.*'
@@ -68,12 +75,14 @@ def t_error(t):
     print("Illegal character '%s'" % t.value[0])
     t.lexer.skip(1)
 
+
 def t_value_error(t):
     print("Illegal character '%s'" % t.value[0])
     t.lexer.skip(1)
 
 # Build the lexer
 lexer = lex.lex()
+
 
 def strip_comments(text):
     '''
