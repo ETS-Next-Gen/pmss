@@ -95,3 +95,10 @@ def usage(schema=pss.schema.default_schema):
     ]
     print(parameters)
     pss.pretty_usage.pretty_usage(_prog, _description, parameters, _epilog)
+
+
+def register_ruleset(ruleset):
+    return settings.ruleset.add_ruleset(ruleset)
+
+def unregister_ruleset(ruleset_id):
+    return settings.ruleset.delete_ruleset(ruleset_id)

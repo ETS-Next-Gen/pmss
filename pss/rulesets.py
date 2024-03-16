@@ -269,9 +269,21 @@ class SQLiteRuleset(Ruleset):
     pass
 
 
+
+id_counter=0
+
 class CombinedRuleset(Ruleset):
-    def __init__(self, rulesets):
+    def __init__(self, rulesets, id=None):
+        global id_counter
         self.rulesets = rulesets
+        if id is None:
+            self.rulesetid = f"{super().id()}:{id_counter}"
+            id_counter = id_counter+1
+        else:
+            self.rulesetid = id
+
+    def id(self):
+        return self.rulesetid
 
     def add_rulesets(self, rulesets):
         for ruleset in rulesets:
@@ -281,6 +293,14 @@ class CombinedRuleset(Ruleset):
         self.rulesets.append(ruleset)
         if not holdoff:
             self.load()
+        return ruleset.id()
+
+    def delete_ruleset(self, id):
+        for ruleset in self.rulesets:
+            if ruleset.id() == id:
+                self.rulesets.remove(ruleset)
+                return id
+        raise KeyError("Ruleset not found")
 
     def load(self):
         for ruleset in self.rulesets:
