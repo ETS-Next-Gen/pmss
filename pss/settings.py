@@ -17,7 +17,19 @@ def verbose():
 
 class Settings():
     '''
-    We are trying to figure out whether this should be an object, a module, or what, or how this should be broken out.
+    This is a helper class which makes it easy and type-safe to
+    query the settings.
+
+    For example, if we would like to query a setting called `verbose`,
+    we can use `settings.verbose()`
+
+    Note that this is not `settings.verbose` since:
+
+    1. We can pass parameters if we have e.g. specific classes, ids, attributes, etc.
+    2. We want to be explicit that this might e.g. query a setting database
+
+    We probably want also want an `async_settings` object for use in
+    asynchronous code in the future.
     '''
     def __init__(
             self,
@@ -28,7 +40,7 @@ class Settings():
         self.source = CombinedSource(sources)
         self.source.load()
 
-    def get(self, key, id=None, types=[], classes=[], attributes={}, default=None):
+    def get(self, key, *args, id=None, types=[], classes=[], attributes={}, default=None):
         results = self.source.query(key, {
             "id": id,
             "types": types,

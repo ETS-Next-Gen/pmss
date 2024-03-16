@@ -83,10 +83,10 @@ The downside, of course, is that many people find CSS a bit complex.
 
 We plan to have series of rule sets. E.g.:
 
-  load_ruleset(args=sys.argsv)
-  load_ruleset(file="~/.settings.pss", name="User settings file", classes=["settings_file"], interpolation=True)
-  load_ruleset(environ=sys.environ, id="environ")
-  delete_ruleset(id="environ")
+    add_ruleset(args=sys.argsv)
+    add_ruleset(file="~/.settings.pss", name="User settings file", classes=["settings_file"], interpolation=True)
+    add_ruleset(environ=sys.environ, id="environ")
+    delete_ruleset(id="environ")
 
 We also plan to have series of schemas, registered in code. Modules
 can define schemas too. For example, a cloud service module could

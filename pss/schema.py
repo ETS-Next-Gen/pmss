@@ -16,14 +16,30 @@ def register_field(
         description = None,
         command_line_flags = None,  # Extra matching command-line flags (beyond --key)
 
-        required = None,  # Can be a selector or a list of selectors. True is shorthand for '*'
-        env = None,  # Environment variables this can be pulled from
-        default = None
+        required = None,            # Can be a selector or a list of selectors. True is shorthand for '*'
+        env = None,                 # Environment variables this can be pulled from
+        default = None,
+        context = None
 ):
-    '''
-    Fields are used to validate sources. This adds a field to the
-    settings instance. All calls to this method should be completed
-    before `validate()`.
+    '''We register fields so we can show usage information, as well
+    as validate the schema of the loaded file.
+
+    All calls to this method should be completed before `validate()`.
+
+    `context` is optional, and describes places we need to be able to
+    retrieve the field from. For example, we might have a required field:
+
+    .user_database {
+       psql_port: 123;
+    }
+
+    .user_database {
+       psql_port: 1234;
+    }
+
+    In this case, we'd like to be able to validate that `psql_port` is
+    of the same type in both places, and available in both places, but
+    we might not need a universal version.
     '''
     if required and default:
         raise ValueError(f"Required parameters shouldn't have a default! {name}")
@@ -35,7 +51,8 @@ def register_field(
         "description": description,
         "required": required,
         "default": default,
-        "env": env
+        "env": env,
+        "context": context
     })
 
 
