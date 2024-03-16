@@ -23,8 +23,11 @@ def pretty_usage(prog, description, parameters, epilog):
     This is loosely based on how argparse thinks about usage().
     """
     # Get terminal size
-    columns, rows = os.get_terminal_size()
-    
+    try:
+        columns, rows = os.get_terminal_size()
+    except OSError:  # e.g. when running inside of `watch` or similar
+        columns, rows = 80, 24  # default terminal size
+
     # Header
     print(prog)
     print('-' * len(prog))

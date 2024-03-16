@@ -29,3 +29,12 @@ def canonical_key(k):
     should probably be a flag.
     '''
     return k.lower().replace('-', '').replace('_', '')
+
+
+def command_line_args(field):
+    '''Perhaps the wrong place, but this extracts the supported ways
+    to reference a field. By default, it is `--name`, but it's possible
+    to override with `command_line_flags`
+
+    '''
+    return field['command_line_flags'] or ['--{name}'.format(**field)]

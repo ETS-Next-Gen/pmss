@@ -1,3 +1,11 @@
+'''
+This implements loaders for rule sets from diverse sources. Note that
+while PSS is the "native" format, it is possible to write loaders for
+e.g. INI files and other formats. This makes sense to do so projects
+can have a smooth transition if they choose to adopt PSS, with full
+backwards-compatibility.
+'''
+
 import enum
 import itertools
 import os
@@ -5,6 +13,8 @@ import sys
 
 import pss.pssselectors
 import pss.loadfile
+
+from pss.util import command_line_args
 
 RULESET_IDS = enum.Enum('RULESET_IDS', ['ENV', 'SourceConfigFile', 'SystemConfigFile', 'UserConfigFile', 'EnvironmentVariables', 'CommandLineArgs'])
 
@@ -212,7 +222,7 @@ class ArgsRuleset(Ruleset):
             name = None
             value = None
             for field in pss.schema.fields:
-                if flag in (field['command_line_flags'] or ['--{name}'.format(**field)]):
+                if flag in command_line_args(field):
                     name = field['name']
                     if len(flag_split) > 1:
                         value = flag_split[1]
