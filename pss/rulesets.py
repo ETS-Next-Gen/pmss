@@ -10,6 +10,7 @@ import enum
 import itertools
 import os
 import sys
+import traceback
 
 import pss.pssselectors
 import pss.loadfile
@@ -85,7 +86,14 @@ class PSSFileRuleset(Ruleset):
         if not self.watch:
             return
         if self.timestamp != os.stat(self.filename).st_mtime:
-            self.load()
+            try:
+                self.load()
+            except:
+                print("Could not reload PSS file.")
+                print("This probably means there was a syntax error in the file.")
+                print("Continuing with the old file")
+                print("Error:")
+                print(traceback.format_exc())
 
     def query(self, key, context):
         self.check_changes()
