@@ -38,7 +38,7 @@ What else is needed?
   - [x] Validation all required fields are provided
   - [ ] Above, considering contexts
   - [x] Validation all fields are declared
-  - [x] Above, for classes and attributes
+  - [ ] Above, for classes and attributes
 - [x] Human-friendly (and ideally, standardized) formats. We don't want to reinvent yaml / json / XML / etc.
 - [x] Comments
 - [ ] Interpolation / DRY / single source of truth
