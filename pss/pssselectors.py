@@ -43,9 +43,6 @@ class Selector():
         raise UnimplementedError("This function should always be overridden.")
 
     def __repr__(self):
-        print(self.__class__.__name__)
-        print(self)
-        print(self.provenance)
         return f"<{self.__class__.__name__} {self} / {self.provenance}>"
 
     def __hash__(self):
@@ -243,7 +240,6 @@ class CompoundSelector(Selector):
         self.selectors = selectors
 
     def __str__(self):
-        print(self.selectors)
         return " ".join(map(str, self.selectors))
 
     def __eq__(self, other):

@@ -318,6 +318,22 @@ def _convert_to_filename(value, exists=False):
     return normalized_path
 
 
+@parser("protocol", parent="string")
+def _convert_to_protocol(value):
+    valid_protocols = ["http", "https"]
+    if value.lower() not in ["http", "https"]:
+        raise ValueError(f"Invalid protocol {value}. Valid protocols: {valid_protocols}")
+    return value
+
+@parser("passwordtoken", parent="string")
+def _convert_to_password(value):
+    def entropy(password):
+        p, lns = collections.Counter(password), float(len(password))
+        return -sum( count/lns * math.log(count/lns, 2) for count in list(p.values()))
+    if entropy(value) < 3:
+        raise ValueError(f"Insecure security token {value}. Entropy: {entropy(value)}. Required: >3")
+    return value
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
