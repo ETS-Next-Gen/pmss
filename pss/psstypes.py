@@ -327,6 +327,8 @@ def _convert_to_protocol(value):
 
 @parser("passwordtoken", parent="string")
 def _convert_to_password(value):
+    # This is a low bar. We probably want more checks in the future,
+    # as well as options for specific types of password.
     def entropy(password):
         p, lns = collections.Counter(password), float(len(password))
         return -sum( count/lns * math.log(count/lns, 2) for count in list(p.values()))
