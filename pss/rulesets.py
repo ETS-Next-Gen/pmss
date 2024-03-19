@@ -6,11 +6,13 @@ can have a smooth transition if they choose to adopt PSS, with full
 backwards-compatibility.
 '''
 
+import collections
 import enum
 import itertools
 import os
 import sys
 import traceback
+import yaml
 
 import pss.pssselectors
 import pss.loadfile
@@ -37,9 +39,8 @@ def _convert_keys_to_str(d):
 
 
 class Ruleset():
-    def __init__(self, schema, rulesetid):
+    def __init__(self, rulesetid):
         self.loaded = False
-        self.schema = schema
         self.rulesetid = rulesetid
 
     def load(self):
@@ -66,21 +67,19 @@ class Ruleset():
         return type(self).__name__
 
     def debug_dump(self):
-        return "[borked]"
+        '''
+        This should never be called directly.
+        '''
+        return f"[borked / {self.id()}]"
 
 
-class PSSFileRuleset(Ruleset):
-    def __init__(self, schema, filename, rulesetid=None, watch=False):
-        super().__init__(schema=schema, rulesetid=rulesetid)
+class FileRuleset(Ruleset):
+    def __init__(self, filename, rulesetid=None, watch=False):
+        super().__init__(rulesetid=rulesetid)
         self.filename = filename
         self.timestamp = None
         self.results = {}
         self.watch = watch
-
-    def load(self):
-        self.timestamp = os.stat(self.filename).st_mtime
-        self.results = pss.loadfile.load_pss_file(self.filename, provenance=self.id())
-        self.loaded = True
 
     def check_changes(self):
         if not self.watch:
@@ -122,6 +121,42 @@ class PSSFileRuleset(Ruleset):
     def debug_dump(self):
         return self.results
 
+class PSSFileRuleset(FileRuleset):
+    def load(self):
+        self.timestamp = os.stat(self.filename).st_mtime
+        self.results = pss.loadfile.load_pss_file(self.filename, provenance=self.id())
+        self.loaded = True
+
+
+class YAMLFileRuleset(FileRuleset):
+    '''
+    This is to read old-school creds.yaml in Learning
+    Observer. Not clear if this belongs here or in Learning
+    Observer. It depends on whether we can make this generic.
+    '''
+    def recurse(self, keys, key, value):
+        '''
+        '''
+        print(keys, key, value)
+        if isinstance(value, dict):
+            for k in value:
+                self.recurse(keys+[key] if key else keys, k, value[k])
+        else:
+            print(keys)
+            selectors = [pss.pssselectors.TypeSelector(k, provenance=self.id()) for k in keys]
+            selector = pss.pssselectors.CompoundSelector(selectors, provenance=self.id())
+            self.results[key][selector] = value
+
+    def load(self):
+        self.timestamp = os.stat(self.filename).st_mtime
+        with open(self.filename, 'r') as f:
+            settings = yaml.safe_load(f)
+
+        self.results = collections.defaultdict(dict)
+        self.recurse([], None, settings)
+        self.results = dict(self.results)
+        self.loaded = True
+
 
 class SimpleEnvsRuleset(Ruleset):
     '''
@@ -140,19 +175,18 @@ class SimpleEnvsRuleset(Ruleset):
     '''
     def __init__(
             self,
-            schema,
             rulesetid=RULESET_IDS.EnvironmentVariables,
             env=os.environ,
             default_keys=True  # Do we assume all environment variables may be keys?
     ):
-        super().__init__(schema=schema, rulesetid=rulesetid)
+        super().__init__(rulesetid=rulesetid)
         self.extracted = {}
         self.default_keys = default_keys
         self.env = env
 
     def load(self):
         if self.default_keys:
-            possible_keys = [k.upper() for k in dir(self.schema)]
+            possible_keys = [k.upper() for k in set([field["name"] for field in pss.schema.fields])]
 
             for key in self.env:
                 if key in possible_keys:
@@ -209,8 +243,8 @@ class ArgsRuleset(Ruleset):
     # --foo=bar
     # --selector:foo=bar
     # --dev (enable class dev, if registered as one of the classes which can be enabled / disabled via commandline)
-    def __init__(self, schema, rulesetid=RULESET_IDS.CommandLineArgs, argv=sys.argv):
-        super().__init__(schema=schema, rulesetid=rulesetid)
+    def __init__(self, rulesetid=RULESET_IDS.CommandLineArgs, argv=sys.argv):
+        super().__init__(rulesetid=rulesetid)
         self.argv = argv
         self.results = {}
 

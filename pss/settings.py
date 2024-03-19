@@ -1,3 +1,8 @@
+'''
+TODO: We'd like `pss.settings` to be `pss.functional.settings`,
+for which we need to rename this file.
+'''
+
 import os.path
 import sys
 import enum

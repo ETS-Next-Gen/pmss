@@ -61,7 +61,10 @@ def init(
     _rulesets = rulesets
 
     initialized = True
-    settings = pss.settings.Settings()
+    if settings is None:
+        settings = pss.settings.Settings(rulesets=rulesets)
+    else:
+        print("Settings already initialized. Check if init isn't being called twice.")
 
     return settings
 
@@ -75,15 +78,15 @@ def default_rulesets(settings):
         [pss.rulesets.RULESET_IDS.UserConfigFile, pss.pathfinder.user_config_file(filename)]
     ]
     file_rulesets = [
-        pss.rulesets.PSSFileRuleset(schema=settings, filename=sd[1], rulesetid=sd[0])
+        pss.rulesets.PSSFileRuleset(filename=sd[1], rulesetid=sd[0])
         for sd in ruleset_files
         if sd[1] is not None and os.path.exists(sd[1])
     ]
     if verbose():
         print("Ruleset files: ", ruleset_files)
     rulesets = [
-        pss.rulesets.ArgsRuleset(schema=settings),
-        pss.rulesets.SimpleEnvsRuleset(schema=settings),
+        pss.rulesets.ArgsRuleset(),
+        pss.rulesets.SimpleEnvsRuleset(),
     ] + file_rulesets
     return rulesets
 
