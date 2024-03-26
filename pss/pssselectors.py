@@ -1,11 +1,21 @@
 import json
 
-class Selector():
-    def __init__(self):
-        self.metadata = None
 
-    def set_metadata(self, metadata):
-        self.metadata = metadata
+class Selector():
+    def __init__(self, provenance=None):
+        self.provenance = provenance
+
+    def set_provenance(self, provenance):
+        self.provenance = provenance
+
+    def css_specificity(self):
+        '''
+        This gives specificity as per CSS standards. This is
+        probably not the ordering function which makes the most sense
+        in many settings contexts, but it's a good well-defined,
+        well-documented default.
+        '''
+        raise NotImplementedError('This should be defined on a subclass')
 
     def __add__(self, other):
         if isinstance(self, NullSelector):
@@ -20,20 +30,23 @@ class Selector():
         if isinstance(self, CompoundSelector):
             self_selectors = self.selectors
         else:
-            self_selectors = [ self ]
+            self_selectors = [self]
 
         if isinstance(other, CompoundSelector):
             other_selectors = other.selectors
         else:
-            other_selectors = [ other ]
+            other_selectors = [other]
 
         return CompoundSelector(self_selectors + other_selectors)
 
+    def __str__(self):
+        raise UnimplementedError("This function should always be overridden.")
+
     def __repr__(self):
-        return f"<{self.__class__.__name__} {self}>"
+        return f"<{self.__class__.__name__} {self} / {self.provenance}>"
 
     def __hash__(self):
-        return hash(json.dumps(self.metadata) + ":" + str(self))
+        return hash(str(self.provenance) + ":" + str(self))
 
     def __ne__(self, other):
         return not self == other
@@ -44,14 +57,17 @@ class Selector():
 
 class ClassSelector(Selector):
     # e.g. `.foo`
-    def __init__(self, class_name):
-        super().__init__()
+    def __init__(self, class_name, provenance=None):
+        super().__init__(provenance=provenance)
         if class_name[0] == ".":
             class_name = class_name[1:]
         self.class_name = class_name
 
+    def css_specificity(self):
+        return 10
+
     def __str__(self):
-        return f".{self.class_name}"
+        return f".{self.class_name} / {self.provenance}"
 
     def __eq__(self, other):
         if not isinstance(other, ClassSelector):
@@ -67,10 +83,13 @@ class ClassSelector(Selector):
             return True
         return False
 
+
 class TypeSelector(Selector):
     # e.g. `div`
-    def __init__(self, element_type):
-        super().__init__()
+    def __init__(self, element_type, provenance=None):
+        super().__init__(provenance=provenance)
+        if element_type is None:
+            raise AttributeError("Element type should be a string")
         self.element_type = element_type
 
     def __str__(self):
@@ -85,15 +104,19 @@ class TypeSelector(Selector):
     def __hash__(self):
         return super().__hash__()
 
+    def css_specificity(self):
+        return 1
+
     def match(self, id=None, types=[], classes=[], attributes={}):
         if self.element_type in types:
             return True
         return False
 
+
 class IDSelector(Selector):
     # e.g. `#bar`
-    def __init__(self, id_name):
-        super().__init__()
+    def __init__(self, id_name, provenance=None):
+        super().__init__(provenance=provenance)
         if id_name[0] == "#":
             id_name = id_name[1:]
         self.id_name = id_name
@@ -110,6 +133,9 @@ class IDSelector(Selector):
     def __hash__(self):
         return super().__hash__()
 
+    def css_specificity(self):
+        return 100
+
     def match(self, id=None, types=[], classes=[], attributes={}):
         if self.id_name == id:
             return True
@@ -118,8 +144,8 @@ class IDSelector(Selector):
 
 class PseudoClassSelector(Selector):
     # e.g. `:hover`
-    def __init__(self, pseudo_class):
-        super().__init__()
+    def __init__(self, pseudo_class, provenance=None):
+        super().__init__(provenance=provenance)
         self.pseudo_class = pseudo_class
 
     def __str__(self):
@@ -134,14 +160,17 @@ class PseudoClassSelector(Selector):
     def __hash__(self):
         return super().__hash__()
 
+    def css_specificity(self):
+        return 10
+
     def match(self, id=None, types=[], classes=[], attributes={}):
         return False  # TODO: Implement
 
 
 class PseudoElementSelector(Selector):
     # e.g. `::before`
-    def __init__(self, pseudo_element):
-        super().__init__()
+    def __init__(self, pseudo_element, provenance=None):
+        super().__init__(provenance=provenance)
         self.pseudo_element = pseudo_element
 
     def __str__(self):
@@ -156,6 +185,9 @@ class PseudoElementSelector(Selector):
     def __hash__(self):
         return super().__hash__()
 
+    def css_specificity(self):
+        return 10
+
     def match(self, id=None, types=[], classes=[], attributes={}):
         return False  # TODO: Implement
 
@@ -166,8 +198,8 @@ class AttributeSelector(Selector):
     # https://developer.mozilla.org/en-US/docs/Learn/CSS/Building_blocks/Selectors/Attribute_selectors
     #
     # Note that we treat [biff] (an attribute exists) as operator and value simply being None
-    def __init__(self, attribute, operator, value):
-        super().__init__()
+    def __init__(self, attribute, operator, value, provenance=None):
+        super().__init__(provenance=provenance)
         self.attribute = attribute
         self.operator = operator
         self.value = value
@@ -186,13 +218,16 @@ class AttributeSelector(Selector):
     def __hash__(self):
         return super().__hash__()
 
+    def css_specificity(self):
+        return 10
+
     def match(self, id=None, types=[], classes=[], attributes={}):
         if self.attribute not in attributes:
             return False
         if self.operator is None:
             return True
         if self.operator != '=':
-            raise UnimplementedError("TODO: Implement non-equality operators in AttributeSelector")
+            raise NotImplementedError("TODO: Implement non-equality operators in AttributeSelector")
         if self.value == attributes[self.attribute]:
             return True
         return False
@@ -200,8 +235,8 @@ class AttributeSelector(Selector):
 
 class CompoundSelector(Selector):
     # e.g. '.foo.bar [baz=biff] [bam] blah
-    def __init__(self, selectors):
-        super().__init__()
+    def __init__(self, selectors, provenance=None):
+        super().__init__(provenance=provenance)
         self.selectors = selectors
 
     def __str__(self):
@@ -215,14 +250,18 @@ class CompoundSelector(Selector):
         #  "foo bar" == "bar foo"
         return all(s1 == s2 for s1, s2 in zip(self.selectors, other.selectors))
 
+    def css_specificity(self):
+        return sum(s.css_specificity() for s in self.selectors)
+
     def __hash__(self):
         return super().__hash__()
 
     def match(self, *args, **kwargs):
         return all([s.match(*args, **kwargs) for s in self.selectors])
 
+
 class NullSelector(CompoundSelector):
-    def __init__(self):
+    def __init__(self, provenance=None):
         super().__init__([])
 
     def __str__(self):
@@ -234,12 +273,19 @@ class NullSelector(CompoundSelector):
     def __hash__(self):
         return super().__hash__()
 
+    def css_specificity(self):
+        return 0
+
     def match(self, *args, **kwargs):
         return True
 
+
 class UniversalSelector(Selector):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, provenance=None):
+        super().__init__(provenance=provenance)
+
+    def css_specificity(self):
+        return 0
 
     def __str__(self):
         return "*"
@@ -253,6 +299,37 @@ class UniversalSelector(Selector):
     def match(self, *args, **kwargs):
         return True
 
+
+sort_hierarchy = [
+    AttributeSelector,
+    UniversalSelector,
+    NullSelector
+]
+
+
+def simple_selector_sort_key(selector):
+    '''Stub function for helping sort lists of selectors. Eventually,
+    we want to use a comparison function rather than a key
+    function. We'll never use this in practice, but it gives an
+    alternative to css_selector()
+    '''
+    selector_type = type(selector)
+    try:
+        idx = sort_hierarchy.index(selector_type)
+    except ValueError:
+        raise RuntimeError(f'We are unsure how to sort this selector: `{selector}`')
+    return (idx, selector)
+
+def css_selector_key(selector):
+    '''
+    Follow CSS rules for specificity. These are a little bit odd
+    for settings, as 10 classes are equal to one ID, so there are
+    weird boundary conditions we might not want in a settings
+    language.
+
+    On the upside, it's well-documented and standardized.
+    '''
+    return -selector.css_specificity()
 
 # Broken. Should be fixed at some point. Neither json nor orjson currently
 # support non-string keys.
@@ -304,7 +381,7 @@ def test_selector_classes():
     assert not id_selector.match(id=f"{ID}_incorrect")
     assert not class_selector.match(classes=[f"{CLASS_NAME}_incorrect"])
     assert not type_selector.match(types=[f"{ELEMENT_TYPE}_incorrect"])
-    assert not attribute_selector.match(attributes={ATTRIBUTE_KEY:ATTRIBUTE_VALUE})
+    assert not attribute_selector.match(attributes={ATTRIBUTE_KEY: ATTRIBUTE_VALUE})
 
     # Testing match function with empty arguments
     assert not id_selector.match()
@@ -318,13 +395,13 @@ def test_selector_classes():
         id=ID,
         types=[ELEMENT_TYPE],
         classes=[CLASS_NAME],
-        attributes={ATTRIBUTE_KEY:ELEMENT_TYPE}
+        attributes={ATTRIBUTE_KEY: ELEMENT_TYPE}
     )
     assert not compound_selector.match(
         id=ID,
         types=[ELEMENT_TYPE],
         classes=[CLASS_NAME + "_incorrect"],
-        attributes={ATTRIBUTE_KEY:ELEMENT_TYPE}
+        attributes={ATTRIBUTE_KEY: ELEMENT_TYPE}
     )
 
 if __name__ == "__main__":

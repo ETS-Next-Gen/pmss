@@ -17,7 +17,7 @@ def system_config_file(name):
     ]
     for path in paths:
         if os.path.isfile(path):
-            return oath
+            return path
     return None
 
 
@@ -44,6 +44,7 @@ def source_config_file(name):
         # raise ValueError("Interactive mode / ...")
 
     return os.path.join(base, name)
+
 
 def package_config_file(package, name):
     if isinstance(package, types.ModuleType):

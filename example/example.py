@@ -1,19 +1,33 @@
-import pss.schema
-import pss.psstypes
+import pss
 
-settings = pss.Settings(
-    prog="Learning Observer",
+settings = pss.init(
+    prog="lo",
     description="A system for monitoring",
     epilog="For more information, see PSS documentation."
 )
 
-settings.register_field(
+pss.register_field(
     name="server_port",
     command_line_flags=["-p", "--port"],
-    type=pss.psstypes.TYPES.port,
+    type=pss.TYPES.port,
     description="The port Learning Observer should run on.",
     default=8888
 )
 
-settings.load()
-settings.validate()
+pss.register_field(
+    name="hostname",
+    type=pss.TYPES.hostname,
+    description="The hostname",
+    required=True
+)
+
+pss.validate(settings)
+
+print('# settings.server_port()')
+print(settings.server_port())
+print("# settings.get('server_port')")
+print(settings.get('server_port'))
+print("# settings.get('server_port', attributes={'school': 'middlesex'}))")
+print(settings.get('server_port', attributes={'school': 'middlesex'}))
+print(settings.debug_dump())
+pss.usage()

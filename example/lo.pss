@@ -1,0 +1,13 @@
+* {
+    _foo: bar;
+}
+
+* {
+    _biff: baz;
+    hostname: foo;
+    server_port: 80;
+}
+
+[school=middlesex] {
+    server_port: 8080;
+}

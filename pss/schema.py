@@ -1,240 +1,236 @@
 # TODO: Break this into multiple files, with appropriate names.
+# move to `rulesets.py` and `settings.py`
 # TODO: Integrate type conversions.
-
-import os.path
-import sys
-import enum
+from collections import defaultdict
 
 import pss.psstypes
-import pss.pathfinder
-import pss.loadfile
-import pss.pssselectors
-#import pss.sources
+import pss.util
 
-def deepupdate(d, u):
+# These are deprecated. We are moving to having these in schema / default_schema.
+fields = []
+classes = []
+attributes = []
+
+
+class Schema:
     '''
-    Like dict.update, but handling nested dictionaries.
+    This may be more of a data structure than a class. It's not
+    clear we want to add any methods onto this.
+
+    95% of the time, we expect to be operating on `default_schema`, and
+    the use-case of more than one Schema object is pretty rare. As a result,
+    a simple, global, `register_field` (and friends) may make sense.
     '''
-    for k, v in u.items():
-        if isinstance(v, dict):
-            d[k] = deepupdate(d.get(k, {}), v)
-        else:
-            d[k] = v
-    return d
-
-SOURCE_IDS = enum.Enum('SOURCE_IDS', ['ENV', 'SourceConfigFile', 'SystemConfigFile', 'UserConfigFile', 'EnvironmentVariables', 'CommandLineArgs'])
-
-class Source():
-    def __init__(self, settings, sourceid):
-        self.loaded = False
-        self.settings = settings
-        self.sourceid = sourceid
-
-    def query(self, *args, **kwargs):
-        raise UnimplementedError("This should always be called on a subclass")
+    def __init__(self, fields, classes, attributes):
+        self.fields = fields
+        self.classes = classes
+        self.attributes = attributes
 
 
-class PSSFileSource(Source):
-    def __init__(self, settings, filename, sourceid=None):
-        super().__init__(settings=settings, sourceid=sourceid)
-        self.filename = filename
-        self.results = pss.loadfile.load_pss_file(filename)
-
-    def query(self, key, context):
-        selector_list = self.results.get(key)
-        return_list = []
-        for selector, value in selector_list:
-            if selector.match(**context):
-                return_list.append([selector, value])
-        return return_list
+default_schema = Schema(fields=fields, classes=classes, attributes=attributes)
 
 
-class SimpleEnvsSource(Source):
+def register_field(
+        name,
+        type,
+        *args,
+        description=None,
+        command_line_flags=None,  # Extra matching command-line flags (beyond --key)
+        required=None,            # Can be a selector or a list of selectors. True is shorthand for '*'
+        env=None,                 # Environment variables this can be pulled from
+        default=None,
+        context=None,
+        schema=default_schema
+):
+    '''We register fields so we can show usage information, as well
+    as validate the schema of the loaded file.
+
+    All calls to this method should be completed before `validate()`.
+
+    `context` is optional, and describes places we need to be able to
+    retrieve the field from. For example, we might have a required field:
+
+    .user_database {
+       psql_port: 123;
+    }
+
+    .user_database {
+       psql_port: 1234;
+    }
+
+    In this case, we'd like to be able to validate that `psql_port` is
+    of the same type in both places, and available in both places, but
+    we might not need a universal version.
     '''
-    Note that, for now, we do not permit selectors in environment
-    variables (for now), since per IEEE Std 1003.1-2001, environment
-    variables consist solely of uppercase letters, digits, and the '_'
-    (underscore) and do not begin with a digit.
+    if required and default:
+        raise ValueError(f"Required parameters shouldn't have a default! {name}")
 
-    In the future, we could make a ComplexEnvsSource where the
-    selector is included in the value or encoded in some way. The
-    future is not today.
+    schema.fields.append({
+        "name": name,
+        "type": type,
+        "command_line_flags": command_line_flags,
+        "description": description,
+        "required": required,
+        "default": default,
+        "env": env,
+        "context": context
+    })
 
-    TODO:
-    * Handle case sensitivity cleanly
-    * Handle default
+
+def register_class(
+        name,
+        *args,
+        command_line_flags=None,
+        description=None,
+        schema=default_schema
+):
     '''
-    def __init__(
-            self,
-            settings,
-            sourceid=SOURCE_IDS.EnvironmentVariables,
-            env=os.environ,
-            default_keys=True  # Do we assume all environment variables may be keys?
-    ):
-        super().__init__(settings=settings, sourceid=sourceid)
-        self.extracted = {}
-        self.default_keys=default_keys
+    For example, 'dev' and 'prod'
 
-    def load(self):
-        if self.default_keys:
-            possible_keys = [k.upper() for k in dir(settings)]
+    This way, we can define rules such as:
+    .dev {}
+    .prod {}
+    '''
+    schema.classes.append({
+        "name": name,
+        "command_line_flags": command_line_flags,
+        "description": description
+    })
 
-            for key in env:
-                if key in possible_keys:
-                    self.extracted[key] = env[key]
-        mapped_keys = dict([(f['env'], f['name']) for f in self.settings.fields if f['env']])
-        for key in env:
-            if key in mapped_keys:
-                self.extracted[mapped_keys[key].upper()] = env[key]
 
-    def query(self, key, context):
-        if key.upper() in self.extracted:
-            return [[pss.pssselectors.UniversalSelector(), key]]
+def register_attribute(
+        name,
+        *args,
+        type,
+        description=None,
+        schema=default_schema
+):
+    '''
+    For example, `'username'` would let us use a selector
+    `[username=bob]`
+    '''
+    schema.attributes.append({
+        "name": name,
+        "type": type,
+        "description": description
+    })
 
-        return False
 
-class ArgsSource(Source):
-    # --foo=bar
-    # --selector:foo=bar
-    # --dev (enable class dev, if registered as one of the classes which can be enabled / disabled via commandline)
-    def __init__(self, settings, sourceid=SOURCE_IDS.CommandLineArgs, argv=sys.argv):
-        super().__init__(settings=settings, sourceid=sourceid)
-        self.argv = argv
+register_field(
+    name="verbose",
+    type=pss.psstypes.TYPES.boolean,
+    command_line_flags=["-v", "--verbose"],
+    description="Print additional debugging information.",
+    default=False
+)
 
-    def load(self):
-        for argument in self.argv[1:]:
-            if "=" in argument:
-                pass
 
-    def query(self, key, context):
-        return False
+register_field(
+    name="help",
+    type=pss.psstypes.TYPES.boolean,
+    command_line_flags=["-h", "--help"],
+    description="Print help information and exit.",
+    default=False
+)
 
-class SQLiteSource(Source):
+
+class ValidationError(Exception):
     pass
 
 
-# We roughly follow:
-#   https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser
+def validate_collisions(fields=fields):
+    '''
+    Make sure we don't have confusingly similar keys (e.g. API_KEY and apikey)
 
-class Settings():
-    def __init__(
-            self,
-            prog=sys.argv[0],    # e.g. lo
-            system_name=None,    # e.g. The Learning Observer
-            usage=None,          # Override the automatically-generated usage
-            description=None,    # Header when generating usage
-            epilog=None,         # Footer when generating usage
-            sources=None,        # Where to grab config from
-            exit_on_failure=True # If true, exit and print usage. If false, raise an exception for system to handle.
-    ):
-        self.prog = prog
-        self.system_name = system_name
-        self.usage = usage
-        self.description = description
-        self.epilog = epilog
-        self.fields = []
-        self.exit_on_failure = exit_on_failure
-        self.sources = []
-        self.settings = {}
+    To do: Make this print good error messages.
+    '''
+    registered_keys = set(field['name'] for field in fields)
+    canonical_keys = defaultdict(list)
 
-        if not sources:
-            sources = self.default_sources()
+    for key in registered_keys:
+        canonical_keys[pss.util.canonical_key(key)].append(key)
 
-        self.add_sources(sources)
+    duplicate_keys = [keys for keys in canonical_keys.values() if len(keys) > 1]
 
-    def add_sources(self, sources):
-        pass
-
-    def default_sources(self):
-        filename = f"{self.prog}.pss"
-        # TODO: Add: pss.pathfinder.package_config_file(filename)?
-        source_files = [
-            [SOURCE_IDS.SourceConfigFile, pss.pathfinder.source_config_file(filename)],
-            [SOURCE_IDS.SystemConfigFile, pss.pathfinder.system_config_file(filename)],
-            [SOURCE_IDS.UserConfigFile, pss.pathfinder.user_config_file(filename)]
-        ]
-        sources = [
-            ArgsSource(settings=self),
-            SimpleEnvsSource(settings=self),
-        ] + [ PSSFileSource(settings=self, filename=sd[1], sourceid=sd[0]) for sd in source_files if sd[1] is not None and os.path.exists(sd[1]) ]
-        return sources
+    if duplicate_keys:
+        error_message = f"Detected duplicate keys: {' : '.join('/'.join(key) for key in duplicate_keys)}"
+        raise ValidationError(error_message)
 
 
-    def register_field(
-            self,
-            name,
-            type,
-            command_line_flags = None,  # Extra matching command-line flags (beyond --key)
-            description = None,
-            required = None,  # Can be a selector or a list of selectors. True is shorthand for '*'
-            env = None,  # Environment variables this can be pulled from
-            default = None
-    ):
-        if required and default:
-            raise ValueError(f"Required parameters shouldn't have a default! {name}")
+def validate_no_missing_required_keys(keys):
+    '''
+    Make sure all required keys are there.
 
-        self.fields.append({
-            "name": name,
-            "type": type,
-            "command_line_flags": command_line_flags,
-            "description": description,
-            "required": required,
-            "default": default
-        })
-
-    def add_source(self, source, holdoff=False):
-        # Implementation of add_source method would go here
-        self.sources.append(source)
-        if not holdoff:
-            self.load()
-
-    def load(self):
-        for source in self.sources:
-            source.load()
-
-    def validate(self):
-        '''
-        '''
-        # TODO: Check we don't have keys with the same name (even with
-        # different case). We haven't decided on case sensitivity, but
-        # -foobar -Foobar -foo-bar -foo_bar all existing WILL cause
-        # confusion AND issues in context like environment variables
-        #
-        # TODO: Check all registered fields exist
-        #
-        # TODO: Check no unregistered variables exist, unless prefixed
-        # with an _
-        #
-        # TODO: Interpolate everything (and in the process, check all
-        # interpolations are valid)
-        pass
-
-    def usage(self):
-        pass
-
-    def get(self, key, context, default=None):
-        for source in sources:
-            l = source.get(key, context)
-            if l:  # TODO: Pick best march
-                return l  # TODO: Convert to propert type
-
-    def __getattr__(self, key):
-        '''
-        Enum-style access to fields.
-        '''
-        for field in self.fields:
-            if field["name"] == key:
-                return key
-
-        raise ValueError(f"Invalid Key: {key}")
-
-    def __dir__(self):
-        return sorted(set([field["name"] for field in self.fields]))
-
-    def __hasattr__(self, key):
-        return key in dir(self)
+    To do: Check selectors versus field specification
+    '''
+    required_keys = set(field['name'] for field in fields if fields['required'])
+    pass
 
 
-if __name__ == "__main__":
-    settings = Settings(prog='test_prog')
-    settings.register_field('test_field', str, command_line_flags=['-t', '--test'], description='Test Field Description')
+def validate_no_extra_keys(keys):
+    '''
+    Make sure there are no extra keys.
+    '''
+    pass
+
+
+def validate(settings):
+    '''Validate all the loaded settings against added fields.
+
+    This will:
+    - Check we don't have keys with the same name (even with
+      different cases).
+    - Check all registered fields exist
+    - Check no unregistered variables exist, unless prefixed with `_`
+    - Interpolate everything
+    '''
+    # check that each key is accessed the same way
+    available_keys = {}
+    for ruleset in [settings.ruleset]:
+        src_keys = ruleset.keys()
+        for key in src_keys:
+            cleaned = pss.util.canonical_key(key)
+            if cleaned not in available_keys:
+                available_keys[cleaned] = {}
+            if key not in available_keys[cleaned]:
+                available_keys[cleaned][key] = set()
+            available_keys[cleaned][key].add(ruleset.id())
+
+    for value in available_keys.values():
+        print(value)
+        if len(value) > 1:
+            keys = '\n'.join(f'  {k}: {v}' for k, v in value.items())
+            error_msg = 'Different keys are being used to access the same setting. '\
+                f'\n{keys}\n'\
+                'Please make sure all keys use the same specification.'
+            raise RuntimeError(error_msg)
+
+    # check if any missing required fields
+    available_fields = []
+    for field in fields:
+        cleaned = pss.util.canonical_key(field['name'])
+        available_fields.append(cleaned)
+        if field['required'] and cleaned not in available_keys:
+            error_msg = f'Required field `{field["name"]}` not found in available rulesets.'
+            raise KeyError(error_msg)
+
+    # check for any extra keys
+    for key in available_keys:
+        k = available_keys[key].popitem()[0]
+        if not k.startswith('_') and key not in available_fields:
+            error_msg = f'Key `{k}` is not registered as a field.'
+            raise KeyError(error_msg)
+
+
+if __name__ == '__main__':
+    try:
+        validate_collisions([{"name": "API_KEY"}, {"name": "apikey"}])
+        print("FAILED TO DETECT COLLISION")
+    except ValidationError as error:
+        print("Correctly caught collision. ", error)
+
+    try:
+        validate_collisions([{"name": "API_KEY"}, {"name": "API_URL"}])
+        print("No duplicate keys detected.")
+    except ValidationError as error:
+        print("INCORRECTLY CAUGHT COLLISION:", error)
