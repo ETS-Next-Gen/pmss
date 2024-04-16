@@ -21,6 +21,7 @@ import configparser
 import collections
 import doctest
 import datetime
+import math
 import os.path
 import re
 
@@ -89,7 +90,8 @@ def parser(
         validation_regexp=None,
         min=None,
         max=None,
-        parent=None
+        parent=None,
+        choices=None
 ):
     def inner(func):
         def new_func(value, **kwargs):
@@ -103,6 +105,8 @@ def parser(
                 raise ValueError(f"Value '{value}' ('{parsed}') is less than {min}")
             if max is not None and parsed > max:
                 raise ValueError(f"Value '{value}' ('{parsed}') is more than {max}")
+            if choices is not None and value not in choices:
+                raise ValueError(f"Value '{value}' ('{parsed}') is not a valid option for {type_name}. Available choices: {choices}")
             return parsed
 
         _TYPES_DICT[type_name]['parser'] = new_func
@@ -216,7 +220,7 @@ def _convert_to_timedelta(value):
     ...
     ValueError: Not a valid timedelta: invalid
     """
-    if isinstance(value, timedelta):
+    if isinstance(value, datetime.timedelta):
         return value
 
     try:
@@ -318,11 +322,8 @@ def _convert_to_filename(value, exists=False):
     return normalized_path
 
 
-@parser("protocol", parent="string")
+@parser("protocol", parent="string", choices=["http", "https"])
 def _convert_to_protocol(value):
-    valid_protocols = ["http", "https"]
-    if value.lower() not in ["http", "https"]:
-        raise ValueError(f"Invalid protocol {value}. Valid protocols: {valid_protocols}")
     return value
 
 @parser("passwordtoken", parent="string")

@@ -137,12 +137,10 @@ class YAMLFileRuleset(FileRuleset):
     def recurse(self, keys, key, value):
         '''
         '''
-        print(keys, key, value)
         if isinstance(value, dict):
             for k in value:
                 self.recurse(keys+[key] if key else keys, k, value[k])
         else:
-            print(keys)
             selectors = [pss.pssselectors.TypeSelector(k, provenance=self.id()) for k in keys]
             selector = pss.pssselectors.CompoundSelector(selectors, provenance=self.id())
             self.results[key][selector] = value
@@ -384,16 +382,27 @@ class CombinedRuleset(Ruleset):
             best_local_match = subquery[0]
             best_matches.append((ruleset.rulesetid, best_local_match))
             break
-
-        if len(best_matches) == 0:
-            return None
-
-        best_match = best_matches[0][1]
-        # find the matching field so we know how to parse
+        # Find the matching field so we know how to parse
         for field in pss.schema.fields:
             if field["name"] == key:
                 field_type = field['type']
-        return pss.psstypes.parse(best_match[1], field_type)
+                break
+        if len(best_matches) == 0:
+            # No matches, grab the field's default.
+            best_match = field.get('default', None)
+        else:
+            # Here's what we are indexing into:
+            # [0] grab the first item (best match)
+            # [1] get the match (index 0 at this layer is the rulesetid)
+            # [1] get the value (index 0 at this layer is the selector)
+            best_match = best_matches[0][1][1]
+
+        # Sometimes it makes sense to default to None which conflicts
+        # with the specified data type. For example, ports should
+        # be integers, but if a port is not specified, we may want
+        # to manually go find one instead. I'm not sure the correct
+        # layer of abstraction to make this.
+        return pss.psstypes.parse(best_match, field_type)
 
     def debug_dump(self):
         return {ruleset.id(): ruleset.debug_dump() for ruleset in self.rulesets}
