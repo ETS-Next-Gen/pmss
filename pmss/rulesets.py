@@ -1,8 +1,8 @@
 '''
 This implements loaders for rule sets from diverse sources. Note that
-while PSS is the "native" format, it is possible to write loaders for
+while PMSS is the "native" format, it is possible to write loaders for
 e.g. INI files and other formats. This makes sense to do so projects
-can have a smooth transition if they choose to adopt PSS, with full
+can have a smooth transition if they choose to adopt PMSS, with full
 backwards-compatibility.
 '''
 
@@ -14,10 +14,10 @@ import sys
 import traceback
 import yaml
 
-import pss.pssselectors
-import pss.loadfile
+import pmss.pmssselectors
+import pmss.loadfile
 
-from pss.util import command_line_args
+from pmss.util import command_line_args
 
 RULESET_IDS = enum.Enum('RULESET_IDS', ['ENV', 'SourceConfigFile', 'SystemConfigFile', 'UserConfigFile', 'EnvironmentVariables', 'CommandLineArgs'])
 
@@ -88,7 +88,7 @@ class FileRuleset(Ruleset):
             try:
                 self.load()
             except:
-                print("Could not reload PSS file.")
+                print("Could not reload PMSS file.")
                 print("This probably means there was a syntax error in the file.")
                 print("Continuing with the old file")
                 print("Error:")
@@ -99,7 +99,7 @@ class FileRuleset(Ruleset):
         if not self.loaded:
             raise RuntimeError(f'Please `load()` data from ruleset `{self.rulesetid} before trying to `query()`.')
         selector_dict = self.results.get(key)
-        # Item not in PSS file
+        # Item not in PMSS file
         if selector_dict is None:
             return []
         return_list = []
@@ -121,10 +121,10 @@ class FileRuleset(Ruleset):
     def debug_dump(self):
         return self.results
 
-class PSSFileRuleset(FileRuleset):
+class PMSSFileRuleset(FileRuleset):
     def load(self):
         self.timestamp = os.stat(self.filename).st_mtime
-        self.results = pss.loadfile.load_pss_file(self.filename, provenance=self.id())
+        self.results = pmss.loadfile.load_pmss_file(self.filename, provenance=self.id())
         self.loaded = True
 
 
@@ -141,8 +141,8 @@ class YAMLFileRuleset(FileRuleset):
             for k in value:
                 self.recurse(keys+[key] if key else keys, k, value[k])
         else:
-            selectors = [pss.pssselectors.TypeSelector(k, provenance=self.id()) for k in keys]
-            selector = pss.pssselectors.CompoundSelector(selectors, provenance=self.id())
+            selectors = [pmss.pmssselectors.TypeSelector(k, provenance=self.id()) for k in keys]
+            selector = pmss.pmssselectors.CompoundSelector(selectors, provenance=self.id())
             self.results[key][selector] = value
 
     def load(self):
@@ -184,12 +184,12 @@ class SimpleEnvsRuleset(Ruleset):
 
     def load(self):
         if self.default_keys:
-            possible_keys = [k.upper() for k in set([field["name"] for field in pss.schema.fields])]
+            possible_keys = [k.upper() for k in set([field["name"] for field in pmss.schema.fields])]
 
             for key in self.env:
                 if key in possible_keys:
                     self.extracted[key] = self.env[key]
-        mapped_keys = dict([(f['env'], f['name']) for f in pss.schema.fields if f['env']])
+        mapped_keys = dict([(f['env'], f['name']) for f in pmss.schema.fields if f['env']])
         for key in self.env:
             if key in mapped_keys:
                 self.extracted[mapped_keys[key].upper()] = self.env[key]
@@ -199,7 +199,7 @@ class SimpleEnvsRuleset(Ruleset):
         if not self.loaded:
             raise RuntimeError(f'Please `load()` data from ruleset `{self.rulesetid} before trying to `query()`.')
         if key.upper() in self.extracted:
-            return [[pss.pssselectors.UniversalSelector(provenance=self.id()), key]]
+            return [[pmss.pmssselectors.UniversalSelector(provenance=self.id()), key]]
 
         return False
 
@@ -271,16 +271,16 @@ class ArgsRuleset(Ruleset):
             flag_split = garg[0].split('=')
             flag = flag_split[0]
             # TODO check if ':' in flag to parse selector
-            selector = pss.pssselectors.UniversalSelector(provenance=self.id())
+            selector = pmss.pmssselectors.UniversalSelector(provenance=self.id())
             name = None
             value = None
-            for field in pss.schema.fields:
+            for field in pmss.schema.fields:
                 if flag in command_line_args(field):
                     name = field['name']
                     if len(flag_split) > 1:
                         value = flag_split[1]
                         break
-                    if field['type'] == pss.psstypes.TYPES.boolean:
+                    if field['type'] == pmss.pmsstypes.TYPES.boolean:
                         value = True
                         break
                     value = garg[1:] if len(garg) > 2 else garg[1:][0]
@@ -299,7 +299,7 @@ class ArgsRuleset(Ruleset):
         self.loaded = True
 
     def query(self, key, context):
-        '''The internal `results` have the same structure as PSSRuleset,
+        '''The internal `results` have the same structure as PMSSRuleset,
         so the `self.query` is identical.
         '''
         if not self.loaded:
@@ -378,12 +378,12 @@ class CombinedRuleset(Ruleset):
             if not subquery:
                 continue
             # sort list based on selector priority to get best match
-            subquery = sorted(subquery, key=lambda x: pss.pssselectors.css_selector_key(x[0]))
+            subquery = sorted(subquery, key=lambda x: pmss.pmssselectors.css_selector_key(x[0]))
             best_local_match = subquery[0]
             best_matches.append((ruleset.rulesetid, best_local_match))
             break
         # Find the matching field so we know how to parse
-        for field in pss.schema.fields:
+        for field in pmss.schema.fields:
             if field["name"] == key:
                 field_type = field['type']
                 break
@@ -402,7 +402,7 @@ class CombinedRuleset(Ruleset):
         # be integers, but if a port is not specified, we may want
         # to manually go find one instead. I'm not sure the correct
         # layer of abstraction to make this.
-        return pss.psstypes.parse(best_match, field_type)
+        return pmss.pmsstypes.parse(best_match, field_type)
 
     def debug_dump(self):
         return {ruleset.id(): ruleset.debug_dump() for ruleset in self.rulesets}

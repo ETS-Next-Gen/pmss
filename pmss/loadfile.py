@@ -2,19 +2,19 @@ import collections
 import io
 import re
 
-import pss.pssyacc
-import pss.psslex
+import pmss.pmssyacc
+import pmss.pmsslex
 
-import pss.pssselectors
+import pmss.pmssselectors
 
 
-def flatten_rules(block_list, parent_selector=pss.pssselectors.NullSelector()):
+def flatten_rules(block_list, parent_selector=pmss.pmssselectors.NullSelector()):
     for selector, block in block_list:
         if block is None:
             continue
         for rule in block:
             combined_selector = parent_selector + selector
-            if not isinstance(rule[0], pss.pssselectors.Selector):
+            if not isinstance(rule[0], pmss.pmssselectors.Selector):
                 yield combined_selector, rule[0], rule[1]
             else:
                 yield from flatten_rules([rule], combined_selector)
@@ -39,7 +39,7 @@ def rule_sheet(parse_results, provenance):
     return dict(d)
 
 
-def load_pss_file(file, provenance, print_debug=False):
+def load_pmss_file(file, provenance, print_debug=False):
     if isinstance(file, str):  # filename
         with open(file, 'r') as f:
             text = f.read()
@@ -49,12 +49,12 @@ def load_pss_file(file, provenance, print_debug=False):
         raise ValueError(
             f"Incorrect type. Expected filename or file-like object: {file}"
         )
-    return load_pss_string(text, provenance=provenance, print_debug=print_debug)
+    return load_pmss_string(text, provenance=provenance, print_debug=print_debug)
 
 
-def load_pss_string(text, provenance, print_debug=False):
-    no_comments = pss.psslex.strip_comments(text)
-    result = pss.pssyacc.parser.parse(no_comments, lexer=pss.psslex.lexer)
+def load_pmss_string(text, provenance, print_debug=False):
+    no_comments = pmss.pmsslex.strip_comments(text)
+    result = pmss.pmssyacc.parser.parse(no_comments, lexer=pmss.pmsslex.lexer)
     print(result)
     if print_debug:
         flatten_and_print_parse(result)
@@ -63,9 +63,9 @@ def load_pss_string(text, provenance, print_debug=False):
 
 
 if __name__ == '__main__':
-    rules = load_pss_file("creds.pss.example", provenance="test-script")
+    rules = load_pmss_file("creds.pmss.example", provenance="test-script")
     print(rules)
-    rules2 = load_pss_file(io.StringIO('* {foo:bar;}'), provenance="test-script")
+    rules2 = load_pmss_file(io.StringIO('* {foo:bar;}'), provenance="test-script")
     print(rules2)
-    rules3 = load_pss_string('* {foo:bar;}', provenance="test-script")
+    rules3 = load_pmss_string('* {foo:bar;}', provenance="test-script")
     print(rules2)

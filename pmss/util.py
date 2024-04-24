@@ -7,7 +7,7 @@ def deepupdate(d, u):
     '''
     Like dict.update, but handling nested dictionaries.
 
-    Useful for merging several `pss` heirarchies
+    Useful for merging several `pmss` heirarchies
     '''
     for k, v in u.items():
         if isinstance(v, dict):

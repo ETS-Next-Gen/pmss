@@ -1,12 +1,12 @@
 import os
 import sys
 
-import pss.pathfinder
-import pss.settings
-import pss.rulesets
-import pss.pretty_usage
+import pmss.pathfinder
+import pmss.settings
+import pmss.rulesets
+import pmss.pretty_usage
 
-from pss.util import command_line_args
+from pmss.util import command_line_args
 
 
 def verbose():
@@ -62,7 +62,7 @@ def init(
 
     initialized = True
     if settings is None:
-        settings = pss.settings.Settings(rulesets=rulesets)
+        settings = pmss.settings.Settings(rulesets=rulesets)
     else:
         print("Settings already initialized. Check if init isn't being called twice.")
 
@@ -70,28 +70,28 @@ def init(
 
 
 def default_rulesets(settings):
-    filename = f"{_prog}.pss"
-    # TODO: Add: pss.pathfinder.package_config_file(filename)?
+    filename = f"{_prog}.pmss"
+    # TODO: Add: pmss.pathfinder.package_config_file(filename)?
     ruleset_files = [
-        [pss.rulesets.RULESET_IDS.SourceConfigFile, pss.pathfinder.source_config_file(filename)],
-        [pss.rulesets.RULESET_IDS.SystemConfigFile, pss.pathfinder.system_config_file(filename)],
-        [pss.rulesets.RULESET_IDS.UserConfigFile, pss.pathfinder.user_config_file(filename)]
+        [pmss.rulesets.RULESET_IDS.SourceConfigFile, pmss.pathfinder.source_config_file(filename)],
+        [pmss.rulesets.RULESET_IDS.SystemConfigFile, pmss.pathfinder.system_config_file(filename)],
+        [pmss.rulesets.RULESET_IDS.UserConfigFile, pmss.pathfinder.user_config_file(filename)]
     ]
     file_rulesets = [
-        pss.rulesets.PSSFileRuleset(filename=sd[1], rulesetid=sd[0])
+        pmss.rulesets.PMSSFileRuleset(filename=sd[1], rulesetid=sd[0])
         for sd in ruleset_files
         if sd[1] is not None and os.path.exists(sd[1])
     ]
     if verbose():
         print("Ruleset files: ", ruleset_files)
     rulesets = [
-        pss.rulesets.ArgsRuleset(),
-        pss.rulesets.SimpleEnvsRuleset(),
+        pmss.rulesets.ArgsRuleset(),
+        pmss.rulesets.SimpleEnvsRuleset(),
     ] + file_rulesets
     return rulesets
 
 
-def usage(schema=pss.schema.default_schema):
+def usage(schema=pmss.schema.default_schema):
     '''
     TODO:
     * Also needs classes and other types of command line parameters
@@ -101,7 +101,7 @@ def usage(schema=pss.schema.default_schema):
         (", ".join(command_line_args(f)), f['description']) for f in schema.fields
     ]
     print(parameters)
-    pss.pretty_usage.pretty_usage(_prog, _description, parameters, _epilog)
+    pmss.pretty_usage.pretty_usage(_prog, _description, parameters, _epilog)
 
 
 def register_ruleset(ruleset):

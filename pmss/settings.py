@@ -1,5 +1,5 @@
 '''
-TODO: We'd like `pss.settings` to be `pss.functional.settings`,
+TODO: We'd like `pmss.settings` to be `pmss.functional.settings`,
 for which we need to rename this file.
 '''
 
@@ -8,12 +8,12 @@ import sys
 import enum
 import itertools
 
-import pss.pathfinder
-import pss.pssselectors
-import pss.schema
-import pss.rulesets
+import pmss.pathfinder
+import pmss.pmssselectors
+import pmss.schema
+import pmss.rulesets
 
-from pss.rulesets import *
+from pmss.rulesets import *
 
 
 def verbose():
@@ -41,7 +41,7 @@ class Settings():
             rulesets=None
     ):
         if rulesets is None:
-            rulesets = pss.functional.default_rulesets(self)
+            rulesets = pmss.functional.default_rulesets(self)
         self.ruleset = CombinedRuleset(rulesets)
         self.ruleset.load()
 
@@ -58,9 +58,9 @@ class Settings():
 
     def __getattr__(self, key):
         '''
-        Enum-style access to pss.schema.fields.
+        Enum-style access to pmss.schema.fields.
         '''
-        for field in pss.schema.fields:
+        for field in pmss.schema.fields:
             if field["name"] == key:
                 def getter(**kwargs):
                     return self.get(key, **kwargs)
@@ -69,7 +69,7 @@ class Settings():
         raise ValueError(f"Invalid Key: {key}")
 
     def __dir__(self):
-        return sorted(set([field["name"] for field in pss.schema.fields]))
+        return sorted(set([field["name"] for field in pmss.schema.fields]))
 
     def __hasattr__(self, key):
         return key in dir(self)

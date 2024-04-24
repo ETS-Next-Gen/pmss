@@ -63,7 +63,7 @@ TYPES = DictEnum(_TYPES_DICT)
 
 def parse(
         value,
-        psstype,
+        pmsstype,
         extra_args={}):
     '''
     >>> parse("570000", TYPES.port)
@@ -83,7 +83,7 @@ def parse(
     ...
     ValueError: File does not exist: /f1aa1.xza (/f1aa1.xza)
     '''
-    return TYPES[psstype]['parser'](value, **extra_args)
+    return TYPES[pmsstype]['parser'](value, **extra_args)
 
 def parser(
         type_name,

@@ -58,16 +58,16 @@ def package_config_file(package, name):
 
 if __name__ == "__main__":
     print("System Config File:")
-    print(system_config_file("system.pss"))
+    print(system_config_file("system.pmss"))
     print
     print("User Config File:")
     print(user_config_file("user"))
     print
     print("Current Working Directory Config File:")
-    print(cwd_config_file("cwd.pss"))
+    print(cwd_config_file("cwd.pmss"))
     print
     print("Source Relative Config File:")
-    print(source_config_file("source.pss"))
+    print(source_config_file("source.pmss"))
     print
     print("ply Package Config File:")
-    print(package_config_file("ply", "package.pss"))
+    print(package_config_file("ply", "package.pmss"))

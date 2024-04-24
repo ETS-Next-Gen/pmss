@@ -3,8 +3,8 @@
 # TODO: Integrate type conversions.
 from collections import defaultdict
 
-import pss.psstypes
-import pss.util
+import pmss.pmsstypes
+import pmss.util
 
 # These are deprecated. We are moving to having these in schema / default_schema.
 fields = []
@@ -118,7 +118,7 @@ def register_attribute(
 
 register_field(
     name="verbose",
-    type=pss.psstypes.TYPES.boolean,
+    type=pmss.pmsstypes.TYPES.boolean,
     command_line_flags=["-v", "--verbose"],
     description="Print additional debugging information.",
     default=False
@@ -127,7 +127,7 @@ register_field(
 
 register_field(
     name="help",
-    type=pss.psstypes.TYPES.boolean,
+    type=pmss.pmsstypes.TYPES.boolean,
     command_line_flags=["-h", "--help"],
     description="Print help information and exit.",
     default=False
@@ -148,7 +148,7 @@ def validate_collisions(fields=fields):
     canonical_keys = defaultdict(list)
 
     for key in registered_keys:
-        canonical_keys[pss.util.canonical_key(key)].append(key)
+        canonical_keys[pmss.util.canonical_key(key)].append(key)
 
     duplicate_keys = [keys for keys in canonical_keys.values() if len(keys) > 1]
 
@@ -189,7 +189,7 @@ def validate(settings):
     for ruleset in [settings.ruleset]:
         src_keys = ruleset.keys()
         for key in src_keys:
-            cleaned = pss.util.canonical_key(key)
+            cleaned = pmss.util.canonical_key(key)
             if cleaned not in available_keys:
                 available_keys[cleaned] = {}
             if key not in available_keys[cleaned]:
@@ -208,7 +208,7 @@ def validate(settings):
     # check if any missing required fields
     available_fields = []
     for field in fields:
-        cleaned = pss.util.canonical_key(field['name'])
+        cleaned = pmss.util.canonical_key(field['name'])
         available_fields.append(cleaned)
         if field['required'] and cleaned not in available_keys:
             error_msg = f'Required field `{field["name"]}` not found in available rulesets.'

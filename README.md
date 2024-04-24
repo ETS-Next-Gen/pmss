@@ -28,7 +28,7 @@ In most cases, this generates a spaghetti-like set of special cases and one-offs
 
 What does cascade? CSS. It's a well-specificed, well-documented syntax. As a result, we use a subset of CSS syntax as our native format.
 
-Mindful of backwards-compatibility, it is possible to integrate PSS into most systems piecemeal. We also have an opinioned, streamlined API which will hopefully make it easy to get started.
+Mindful of backwards-compatibility, it is possible to integrate PMSS into most systems piecemeal. We also have an opinioned, streamlined API which will hopefully make it easy to get started.
 
 What else is needed?
 --------------------
@@ -56,7 +56,7 @@ What else is needed?
   - [ ] Robust validation and error handling on a reload.
 - [ ] Robust test infrastructure
 - [ ] Nice documentation
-- [ ] pypi package (this might need a rename, since pss is taken!)
+- [ ] pypi package (this might need a rename, since pmss is taken!)
 - [ ] INI file support, to give an example of how to handle backwards-compatibility
 - [ ] Better error messages
 - [ ] Nicer `usage()`
@@ -72,30 +72,30 @@ From Python:
 
 ```python
 
-import pss
+import pmss
 
-settings = pss.init(
+settings = pmss.init(
     prog="lo",
     description="A system for monitoring",
-    epilog="For more information, see PSS documentation."
+    epilog="For more information, see PMSS documentation."
 )
 
-pss.register_field(
+pmss.register_field(
     name="server_port",
     command_line_flags=["-p", "--port"],
-    type=pss.TYPES.port,
+    type=pmss.TYPES.port,
     description="The port our system should run on.",
     default=8888
 )
 
-pss.register_field(
+pmss.register_field(
     name="hostname",
-    type=pss.TYPES.hostname,
+    type=pmss.TYPES.hostname,
     description="The hostname",
     required=True
 )
 
-pss.validate(settings)
+pmss.validate(settings)
 normal_port = settings.server_port()
 exception_port = settings.server_port(attributes={'school': 'middlesex'})
 ```
@@ -135,7 +135,7 @@ Conceptually, we plan to have series of rule sets. E.g.:
 
 ```python
     add_ruleset(args=sys.argsv)
-    add_ruleset(file="~/.settings.pss", name="User settings file", classes=["settings_file"], interpolation=True)
+    add_ruleset(file="~/.settings.pmss", name="User settings file", classes=["settings_file"], interpolation=True)
     add_ruleset(environ=sys.environ, id="environ")
     delete_ruleset(id="environ")
 ```
@@ -184,11 +184,11 @@ or:
 For debugging, we can have fine-grained settings
 
 ```python
-if settings.verbose(types=['pss', 'selectors']):
+if settings.verbose(types=['pmss', 'selectors']):
    print("....")
 ```
 
-And we can decide what to make verbose from the command line whether to run `--verbose=True` or `--pss:verbose=True` or otherwise.
+And we can decide what to make verbose from the command line whether to run `--verbose=True` or `--pmss:verbose=True` or otherwise.
 
 Likewise, we can define classes for e.g. prod and dev:
 
@@ -205,10 +205,10 @@ Likewise, we can define classes for e.g. prod and dev:
 Files
 -----
 
-* psslex.py and pssyacc.py are the lexer and parser for our variant of
+* pmsslex.py and pmssyacc.py are the lexer and parser for our variant of
   CSS. These are designed to be interchangeable if you'd like e.g.
   full CSS or an INI file or whatnot.
-* psstypes.py handles type validation and conversion. We use other
+* pmsstypes.py handles type validation and conversion. We use other
   libraries where possible, to maintain compatible formats. Conversely,
   this is usable without the rest of the system.
 
