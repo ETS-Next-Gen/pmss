@@ -1,7 +1,7 @@
-PSS
+Preference Management Style Sheets
 ===
 
-This is intended as a language for settings.
+This is intended as a language for settings. The name might be a placeholder. Or final. Who knows?
 
 ![XKCD Standards Comic](https://imgs.xkcd.com/comics/standards.png)
 
