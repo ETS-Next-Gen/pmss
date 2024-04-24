@@ -21,12 +21,13 @@ import configparser
 import collections
 import doctest
 import datetime
+import enum
+import functools
 import math
 import os.path
 import re
 
 _TYPES_DICT = collections.defaultdict(dict)
-
 
 class DictEnum:
     def __init__(self, d):
@@ -85,22 +86,43 @@ def parse(
     '''
     return TYPES[pmsstype]['parser'](value, **extra_args)
 
+
+class TransformType(enum.Enum):
+    Decorator = 'Decorator'
+
+
 def parser(
         type_name,
         validation_regexp=None,
         min=None,
         max=None,
         parent=None,
-        choices=None
+        choices=None,
+        transform=TransformType.Decorator
 ):
-    def inner(func):
+    '''We want to be able to call the parser as both a
+    decorator and call it without including a function.
+
+    We initially set the `type_name` parser to be an identity
+    function (or the passed in `transform` function). If this
+    function is being used as a decorator, we overwrite the
+    parser with the decorated function.
+
+    Additionally, we use a closure so we can validate (check
+    the regex, min, max, choices, etc.) the output of
+    whatever function is used for the parser.
+
+    NOTE: the `transform` parameter will do nothing (gets
+    overwritten) when this function is called as a decorator
+    '''
+    def validate_value(value_function):
         def new_func(value, **kwargs):
             if validation_regexp and isinstance(value, str):
                 if not re.match(validation_regexp, value):
                     raise ValueError(f"Value '{value}' does not match the required pattern {validation_regexp})")
             if parent:
                 value = _TYPES_DICT[parent]['parser'](value)
-            parsed = func(value, **kwargs)
+            parsed = value_function(value, **kwargs)
             if min is not None and parsed < min:
                 raise ValueError(f"Value '{value}' ('{parsed}') is less than {min}")
             if max is not None and parsed > max:
@@ -108,9 +130,20 @@ def parser(
             if choices is not None and value not in choices:
                 raise ValueError(f"Value '{value}' ('{parsed}') is not a valid option for {type_name}. Available choices: {choices}")
             return parsed
-
-        _TYPES_DICT[type_name]['parser'] = new_func
         return new_func
+
+    def inner(func):
+        _TYPES_DICT[type_name]['parser'] = validate_value(func)
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+        return wrapper
+
+    if transform != TransformType.Decorator:
+        transformation_func = transform if transform is not None else lambda val: val
+        if not callable(transformation_func):
+            raise TypeError('The transform paramter must be a callable function.')
+        _TYPES_DICT[type_name]['parser'] = validate_value(transformation_func)
     return inner
 
 @parser("string")
