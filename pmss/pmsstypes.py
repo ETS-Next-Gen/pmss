@@ -21,13 +21,13 @@ import configparser
 import collections
 import doctest
 import datetime
+import enum
 import functools
 import math
 import os.path
 import re
 
 _TYPES_DICT = collections.defaultdict(dict)
-
 
 class DictEnum:
     def __init__(self, d):
@@ -86,6 +86,11 @@ def parse(
     '''
     return TYPES[pmsstype]['parser'](value, **extra_args)
 
+
+class TransformType(enum.Enum):
+    Decorator = 'Decorator'
+
+
 def parser(
         type_name,
         validation_regexp=None,
@@ -93,7 +98,7 @@ def parser(
         max=None,
         parent=None,
         choices=None,
-        transform=None
+        transform=TransformType.Decorator
 ):
     '''We want to be able to call the parser as both a
     decorator and call it without including a function.
@@ -134,8 +139,11 @@ def parser(
             return func(*args, **kwargs)
         return wrapper
 
-    transformation_func = transform if callable(transform) else lambda val: val
-    _TYPES_DICT[type_name]['parser'] = validate_value(transformation_func)
+    if transform != TransformType.Decorator:
+        transformation_func = transform if transform is not None else lambda val: val
+        if not callable(transformation_func):
+            raise TypeError('The transform paramter must be a callable function.')
+        _TYPES_DICT[type_name]['parser'] = validate_value(transformation_func)
     return inner
 
 @parser("string")
