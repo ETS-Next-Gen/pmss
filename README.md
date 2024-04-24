@@ -159,8 +159,8 @@ We're trying to make this batteries included, so by default, the
 rulesets look in the standard locations (`~`, `/etc`, etc.) and on the
 commandline.
 
-We do not look at parent / child relationships, so the following are
-both okay:
+In most cases, we do not look at parent / child relationships, so the
+following are both okay:
 
 ```css
     auth {
