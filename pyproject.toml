@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pmss"
-version = "0.0.2"
+version = "0.0.3"
 authors = [
   { name="Piotr Mitros", email="piotr@mitros.org" },
 ]
@@ -17,8 +17,9 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "ply"
+    "ply",
+    "pyyaml"
 ]
 
 [project.urls]
-Homepage = "https://github.com/ETS-Nextgen/pmss"
+Homepage = "https://github.com/ETS-Next-Gen/pmss"

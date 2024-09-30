@@ -402,7 +402,10 @@ class CombinedRuleset(Ruleset):
         # be integers, but if a port is not specified, we may want
         # to manually go find one instead. I'm not sure the correct
         # layer of abstraction to make this.
-        return pmss.pmsstypes.parse(best_match, field_type)
+        try:
+            return pmss.pmsstypes.parse(best_match, field_type)
+        except Exception as e:
+            raise ValueError(f'Unable to parse value for key `{key}`. See above exception for more details.') from e
 
     def debug_dump(self):
         return {ruleset.id(): ruleset.debug_dump() for ruleset in self.rulesets}
