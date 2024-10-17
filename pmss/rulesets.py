@@ -8,6 +8,7 @@ backwards-compatibility.
 
 import collections
 import enum
+import errno
 import itertools
 import os
 import sys
@@ -80,6 +81,8 @@ class FileRuleset(Ruleset):
         self.timestamp = None
         self.results = {}
         self.watch = watch
+        if not os.path.isfile(filename):
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), pathname)
 
     def check_changes(self):
         if not self.watch:
